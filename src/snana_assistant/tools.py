@@ -16,18 +16,30 @@ from .knowledge import KnowledgeBase
 
 
 def check_job_status(user: str | None = None) -> str:
-    """Wraps `squeue -u $USER` — step 1 of the pipeline-debug checklist (job name
-    conflicts, stuck PD/CG jobs)."""
+    """Wraps squeue (Slurm) or qstat (PBS) to check scheduler state — step 1 of the pipeline-debug checklist."""
     user = user or os.environ.get("USER", "")
+    
+    # Try squeue (Slurm)
     try:
         out = subprocess.run(
             ["squeue", "-u", user], capture_output=True, text=True, timeout=15, check=False
         )
+        if out.returncode == 0:
+            return out.stdout.strip() or f"No jobs currently queued/running for user {user}."
     except FileNotFoundError:
-        return "squeue not available on this host (not a Slurm cluster, or not in PATH)."
-    if out.returncode != 0:
-        return f"squeue failed: {out.stderr.strip()}"
-    return out.stdout.strip() or f"No jobs currently queued/running for user {user}."
+        pass
+        
+    # Try qstat (PBS)
+    try:
+        out = subprocess.run(
+            ["qstat", "-u", user], capture_output=True, text=True, timeout=15, check=False
+        )
+        if out.returncode == 0:
+            return out.stdout.strip() or f"No jobs currently queued/running for user {user}."
+    except FileNotFoundError:
+        pass
+        
+    return "No supported scheduler (squeue/qstat) found on this host."
 
 
 def diff_config(source_path: str, cached_path: str) -> str:
@@ -62,11 +74,25 @@ def read_log_tail(log_path: str, n_lines: int = 200) -> str:
     return header + "\n".join(tail[-80:])  # cap raw tail shown to keep context bounded
 
 
-def search_manual(query: str, manual_path: str = "/global/homes/a/ayanmitr/SNANA/doc/snana_manual.tex", window: int = 15) -> str:
+def search_manual(query: str, manual_path: str | None = None, window: int = 15) -> str:
     """Search the SNANA LaTeX manual for relevant sections or parameters."""
+    if not manual_path:
+        manual_path = os.environ.get("SNANA_MANUAL_PATH")
+        
+    if not manual_path:
+        snana_dir = os.environ.get("SNANA_DIR")
+        if snana_dir:
+            manual_path = os.path.join(snana_dir, "doc", "snana_manual.tex")
+            
+    if not manual_path:
+        manual_path = "/global/homes/a/ayanmitr/SNANA/doc/snana_manual.tex"
+        
     p = Path(manual_path)
     if not p.exists():
-        return f"Manual file not found at {manual_path}."
+        return (
+            f"Manual file not found. Checked path: {manual_path}.\n"
+            "Please set SNANA_DIR or SNANA_MANUAL_PATH in your environment or .env file."
+        )
         
     try:
         content = p.read_text(encoding="utf-8", errors="replace")
@@ -126,11 +152,17 @@ def search_knowledge(query: str, kb: KnowledgeBase) -> str:
     return "\n\n".join(e.as_context_block() for e in results)
 
 
-def search_gotchas(query: str, gotchas_dir: str = "~/.claude/snana-knowledge", window: int = 10) -> str:
+def search_gotchas(query: str, gotchas_dir: str | None = None, window: int = 10) -> str:
     """Search the user's custom gotchas and SNANA knowledge files (~/.claude/snana-knowledge/*.md)."""
+    if not gotchas_dir:
+        gotchas_dir = os.environ.get("SNANA_GOTCHAS_DIR") or "~/.claude/snana-knowledge"
+        
     base_path = Path(gotchas_dir).expanduser()
     if not base_path.exists():
-        return f"Gotchas directory not found at {gotchas_dir}."
+        return (
+            f"Gotchas directory not found. Checked path: {gotchas_dir}.\n"
+            "If you have personal gotchas/notes, set SNANA_GOTCHAS_DIR in your environment or .env file."
+        )
         
     md_files = list(base_path.glob("*.md"))
     if not md_files:
