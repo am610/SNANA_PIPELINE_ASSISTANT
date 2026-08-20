@@ -72,6 +72,32 @@ Started: 2026-08-20.
 - This is also where a funded proposal (see `GRANTS.md`) would carry the work past
   what's feasible as an unfunded side project
 
+## Distribution: two tiers, not "free vs. proper"
+
+Two ways to run this, with different guarantees — not a gimped-free-tier-to-upsell
+structure (that would undermine the honesty this project is otherwise built on, and
+would look bad in a grant proposal). Both read the same `knowledge/entries.yaml` as
+the single source of truth.
+
+- **Default (Claude Code / Codex CLI skill):** zero setup, uses whatever
+  subscription/session you already have. Best-effort — model version and exact
+  tool behavior depend on your session, not pinned, not covered by the eval
+  harness. This is the "quick start."
+- **Opt-in (API key, `agent.py` + backends):** pinned model, deterministic Python
+  tools, the only path covered by `eval/cases.yaml`, the only path that works
+  non-interactively (cron/CI/scripted). For people who need reproducibility or
+  volume, not people who "paid for the better answer."
+
+The README should state this plainly rather than imply one path is more real than
+the other.
+
+**Update distribution (verified via research, 2026-08-20):** a plain cloned skill
+has no auto-update — `git pull` is the honest instruction. Real auto-update exists
+only via a proper Claude Code plugin (a `plugin.json` manifest hosted in a
+marketplace repo, installed with `/plugin install <name>@<marketplace>`, updates
+checked after session startup). Not built yet — `skill/SKILL.md` is a plain skill
+for now. Worth revisiting as a plugin if this gets real outside adoption.
+
 ## Status log
 *(update at the end of each work session — date, what changed, next step)*
 

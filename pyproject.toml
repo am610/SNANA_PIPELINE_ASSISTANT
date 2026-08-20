@@ -3,7 +3,13 @@ name = "snana-assistant"
 version = "0.1.0"
 description = "LLM-based ops assistant for SNANA/Pippin pipelines"
 requires-python = ">=3.10"
-dependencies = ["anthropic>=0.125.0", "pyyaml>=6.0"]
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.125.0"]
+openai = ["openai>=1.0"]
+gemini = ["google-genai"]
+all = ["anthropic>=0.125.0", "openai>=1.0", "google-genai"]
 
 [project.scripts]
 snana-assistant = "snana_assistant.cli:main"

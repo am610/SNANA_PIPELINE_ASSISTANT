@@ -1,17 +1,16 @@
-"""The tool-use agent loop. BYOK: reads ANTHROPIC_API_KEY from the environment —
-no subscription, no hosted backend, no cost to anyone but the person running it.
+"""The agent: fixed debugging logic + knowledge base, pluggable LLM backend.
 
-Local/open-weight backend (Phase 3) is not implemented yet — this module is the
-hosted-API path only. See ROADMAP.md design principle #5.
+BYOK across three providers — no subscription required for any of them, and no
+lock-in to whichever vendor you happen to have credits with. Picks a backend
+automatically from whichever API key is set (Anthropic > OpenAI > Gemini, in that
+order, if more than one happens to be set), or takes an explicit `provider=`.
 """
 
 from __future__ import annotations
 
-import json
 import os
 
-import anthropic
-
+from .backends import AnthropicBackend, Backend, GeminiBackend, OpenAIBackend
 from .knowledge import KnowledgeBase
 from .tools import TOOL_SCHEMAS, make_dispatch
 
@@ -31,49 +30,34 @@ matches, say so explicitly rather than guessing — this system is meant to be h
 about the edges of what it knows, not to fabricate a plausible-sounding diagnosis.
 """
 
+_BACKEND_BY_PROVIDER = {
+    "anthropic": (AnthropicBackend, "ANTHROPIC_API_KEY"),
+    "openai": (OpenAIBackend, "OPENAI_API_KEY"),
+    "gemini": (GeminiBackend, "GOOGLE_API_KEY"),
+}
+
+
+def _autodetect_backend() -> Backend:
+    for provider, (cls, env_var) in _BACKEND_BY_PROVIDER.items():
+        if os.environ.get(env_var) or (provider == "gemini" and os.environ.get("GEMINI_API_KEY")):
+            return cls()
+    raise RuntimeError(
+        "No API key found. Set one of: ANTHROPIC_API_KEY, OPENAI_API_KEY, "
+        "GOOGLE_API_KEY (or GEMINI_API_KEY)."
+    )
+
 
 class Agent:
-    def __init__(self, kb: KnowledgeBase | None = None, model: str = "claude-sonnet-5"):
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "ANTHROPIC_API_KEY not set. This tool is bring-your-own-key: "
-                "export ANTHROPIC_API_KEY=sk-... before running."
-            )
-        self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = model
+    def __init__(self, kb: KnowledgeBase | None = None, backend: Backend | None = None, provider: str | None = None):
         self.kb = kb or KnowledgeBase.load()
         self.dispatch = make_dispatch(self.kb)
+        if backend is not None:
+            self.backend = backend
+        elif provider is not None:
+            cls, _ = _BACKEND_BY_PROVIDER[provider]
+            self.backend = cls()
+        else:
+            self.backend = _autodetect_backend()
 
     def diagnose(self, user_message: str, max_turns: int = 6) -> str:
-        messages = [{"role": "user", "content": user_message}]
-        for _ in range(max_turns):
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=1024,
-                system=SYSTEM_PROMPT,
-                tools=TOOL_SCHEMAS,
-                messages=messages,
-            )
-            if response.stop_reason != "tool_use":
-                return "".join(block.text for block in response.content if block.type == "text")
-
-            messages.append({"role": "assistant", "content": response.content})
-            tool_results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
-                fn = self.dispatch.get(block.name)
-                if fn is None:
-                    result = f"Unknown tool: {block.name}"
-                else:
-                    try:
-                        result = fn(**block.input)
-                    except Exception as exc:  # tool failures should inform the agent, not crash the loop
-                        result = f"Tool {block.name} raised: {exc}"
-                tool_results.append(
-                    {"type": "tool_result", "tool_use_id": block.id, "content": str(result)}
-                )
-            messages.append({"role": "user", "content": tool_results})
-
-        return "Reached max_turns without a final answer — the failure may need a human to look at it."
+        return self.backend.diagnose(SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.dispatch, max_turns)

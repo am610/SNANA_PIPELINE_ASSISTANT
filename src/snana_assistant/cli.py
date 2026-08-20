@@ -14,12 +14,16 @@ def main() -> None:
 
     diagnose_p = sub.add_parser("diagnose", help="Describe a failure; the assistant investigates.")
     diagnose_p.add_argument("description", help="What's failing, in your own words (paste error text if you have it).")
+    diagnose_p.add_argument(
+        "--provider", choices=["anthropic", "openai", "gemini"], default=None,
+        help="Force a specific backend instead of auto-detecting from which API key is set.",
+    )
 
     args = parser.parse_args()
 
     if args.command == "diagnose":
         try:
-            agent = Agent()
+            agent = Agent(provider=args.provider)
         except RuntimeError as exc:
             print(str(exc), file=sys.stderr)
             sys.exit(1)

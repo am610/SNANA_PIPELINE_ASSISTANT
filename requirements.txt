@@ -1,2 +1,7 @@
-anthropic>=0.125.0
+# Full dev/test install (all three backends). For a real install, prefer
+# `pip install -e ".[anthropic]"` (or openai / gemini / all) so you only pull in
+# the SDK for the provider you're actually using.
 pyyaml>=6.0
+anthropic>=0.125.0
+openai>=1.0
+google-genai

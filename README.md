@@ -9,7 +9,25 @@ speculation).
 Status: early prototype (Phase 1 of `ROADMAP.md`). Not yet published — see
 `ROADMAP.md`/`GRANTS.md` for the fuller plan and funding strategy.
 
-## Install
+## Two ways to run this
+
+Not "free vs. proper" — two different guarantees, same underlying knowledge base
+(`knowledge/entries.yaml`, single source of truth for both):
+
+- **Quick start — Claude Code skill** (`skill/SKILL.md`): zero setup, uses whatever
+  Claude Code session/plan you already have. Best-effort — model and exact tool
+  behavior depend on your session, not pinned, not covered by the eval harness.
+  Install: `git clone` this repo, then symlink or copy `skill/` into your own
+  `~/.claude/skills/snana-assistant/` (path may vary by Claude Code version/config).
+  **No auto-update** — this is a plain cloned skill, not a Claude Code plugin, so
+  updates mean `git pull` in your clone. A real plugin-marketplace distribution
+  (which does support auto-update, via `/plugin install`) is a possible later
+  upgrade, not built yet — see `ROADMAP.md`.
+- **Reproducible/scripted — standalone CLI** (below): pinned model, deterministic
+  tools, covered by `eval/cases.yaml`, works non-interactively. Needs your own API
+  key for one of Anthropic/OpenAI/Gemini.
+
+## Install (standalone CLI)
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
