@@ -1,7 +1,0 @@
-Metadata-Version: 2.4
-Name: snana-assistant
-Version: 0.1.0
-Summary: LLM-based ops assistant for SNANA/Pippin pipelines
-Requires-Python: >=3.10
-Requires-Dist: anthropic>=0.125.0
-Requires-Dist: pyyaml>=6.0
