@@ -1,0 +1,24 @@
+site_name: SNANA Pipeline Assistant
+site_description: An LLM-based operations assistant for SNANA/Pippin pipelines.
+site_author: Ayan Mitra
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: teal
+    accent: teal
+  features:
+    - navigation.tabs
+    - navigation.sections
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Curated Gotchas: gotchas.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
