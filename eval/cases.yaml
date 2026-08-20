@@ -1,0 +1,50 @@
+# Eval harness seed cases. Each case pairs a realistic user query against the
+# knowledge-base entry it should surface. This is intentionally small (8, one per
+# seed KB entry) — target is 15-20 per ROADMAP.md; the rest should come from real
+# incidents in sessions_log.md and, later, the SNANA GitHub issue corpus (see
+# ROADMAP.md Phase 1.5) rather than more synthetic cases like these.
+#
+# Not run automatically yet — no runner script exists. Next step: a small script
+# that calls Agent.diagnose() per case and checks whether the expected entry id
+# was cited in the response.
+
+- query: >
+    My RERUN batch job for LCFIT has been running for 18 hours and the log just
+    keeps saying "Wait for ['BUSY_MERGE_CPU0014.LOCK'] to clear" over and over.
+    Nothing is actually getting fit.
+  expected_entry: stale-busy-merge-lock
+
+- query: >
+    Merge log says FATAL ERROR ABORT: Missing expected
+    PIP_XYZ-0018/FITOPT018.FITRES but MERGE.LOG shows that version as DONE.
+  expected_entry: missing-fitres-after-merge-abort
+
+- query: >
+    BBC is aborting and mentions sigint. I tried adding sigint_fix to my SALT2mu
+    input but it still fails.
+  expected_entry: sigint-abort-bbc
+
+- query: >
+    snlc_fit.exe aborts complaining it can't find the SALT2 probability density
+    files.
+  expected_entry: missing-salt2-pdf
+
+- query: >
+    My sim keeps rejecting almost every host in the HOSTLIB during matching and
+    I don't understand why.
+  expected_entry: hostlib-dztol-too-tight
+
+- query: >
+    I gave my sim a long descriptive GENVERSION name and now the actual output
+    directory doesn't match what I specified.
+  expected_entry: genversion-truncation
+
+- query: >
+    I resubmitted a Pippin stage under a new name but it seems to be silently
+    reusing results from an old, unrelated run.
+  expected_entry: slurm-jobname-truncation-collision
+
+- query: >
+    I fixed a typo in my sim input YAML but Pippin fails the exact same way it
+    did before the fix.
+  expected_entry: stale-cached-yaml

@@ -1,0 +1,2 @@
+[console_scripts]
+snana-assistant = snana_assistant.cli:main

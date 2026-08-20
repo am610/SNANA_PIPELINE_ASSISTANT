@@ -1,0 +1,87 @@
+# Structured knowledge base — schema defined in KNOWLEDGE.md.
+# status: verified | unverified   scope: universal | slurm | perlmutter
+- id: stale-busy-merge-lock
+  symptom: >
+    LOG shows "Wait for ['BUSY_MERGE_CPUXXXX.LOCK'] to clear" repeated for hours,
+    then "CANCELLED ... DUE TO TIME LIMIT". Zero fitting occurs despite the job
+    running its full walltime.
+  cause: >
+    A prior merge crash or kill left a BUSY_MERGE_CPU*.LOCK file in output/. The
+    resubmitted job's CMD calls --merge after each fit and waits indefinitely for
+    the stale lock.
+  fix: "Before resubmitting any RERUN batch: rm -f output/BUSY_MERGE_CPU*.LOCK"
+  scope: universal
+  status: verified
+  source: "EUCLID_LSST_DDF_V4_PHOTOZ FIT_DATA_EUCLID_PHZ, 2026-06-09"
+
+- id: missing-fitres-after-merge-abort
+  symptom: >
+    "FATAL ERROR ABORT: Missing expected PIP_...-00XX/FITOPTYYY.FITRES" in the
+    merge log.
+  cause: >
+    A merge attempt aborted mid-way (stale lock, truncated FITRES, allocation
+    kill). The merge driver marked the version/FITOPT DONE in MERGE.LOG but never
+    wrote the final merged FITRES file.
+  fix: >
+    1) Verify raw FITRES.TEXT is intact: grep -c '^SN:' <VERSION>_FITOPTYYY_SPLIT001.FITRES.TEXT
+    2) If intact, rebuild: cat <PREFIX>_FITOPTYYY*FITRES.TEXT > /tmp/MERGE_tmp.FITRES;
+       awk '!/^VARNAMES/ || ++n <= 1' /tmp/MERGE_tmp.FITRES > /tmp/MERGE2_tmp.FITRES;
+       cp /tmp/MERGE2_tmp.FITRES ../PIP_...-00XX/FITOPTYYY.FITRES
+    3) Truncate the FATAL ERROR from MERGE.LOG, delete ALL.DONE, run MERGE_LAST.
+  scope: universal
+  status: verified
+  source: "-0018/FITOPT018.FITRES, 2026-06-09"
+
+- id: sigint-abort-bbc
+  symptom: "BBC (SALT2mu) aborts citing sigint."
+  cause: "Attempting to use a nonexistent 'sigint_fix' option."
+  fix: "Use sigmb_biascor, not sigint_fix — the latter does not exist."
+  scope: universal
+  status: verified
+  source: "pipeline-debug checklist / project ground rules"
+
+- id: missing-salt2-pdf
+  symptom: "LCFIT/sim aborts referencing missing SALT2 probability-density files."
+  cause: "SALT2_INFO path in the sim input file is wrong or the PDF files aren't at that path."
+  fix: "Verify SALT2_INFO path in the sim input file against what's actually on disk."
+  scope: universal
+  status: verified
+  source: "pipeline-debug checklist / project ground rules"
+
+- id: hostlib-dztol-too-tight
+  symptom: "HOSTLIB-related aborts or excessive event rejection during host matching."
+  cause: "HOSTLIB_DZTOL tolerance set too tight for the redshift precision in the HOSTLIB."
+  fix: "Loosen HOSTLIB_DZTOL in the HOSTLIB config."
+  scope: universal
+  status: verified
+  source: "pipeline-debug checklist / project ground rules"
+
+- id: genversion-truncation
+  symptom: "Sim runs under a different effective GENVERSION than specified, or two long-named runs collide."
+  cause: "GENVERSION strings are silently truncated at ~72 characters."
+  fix: "Keep GENVERSION names short; check for truncation collisions with long descriptive names."
+  scope: universal
+  status: verified
+  source: "Bailey+2022 reproduction session, 2026-08-16"
+
+- id: slurm-jobname-truncation-collision
+  symptom: "Pippin reruns appear to silently reuse/interfere with a prior job."
+  cause: >
+    Slurm job names are truncated at ~8 characters; two differently-named Pippin
+    jobs can collide after truncation.
+  fix: "Check squeue -u $USER for duplicate truncated names before assuming a config/code-level failure."
+  scope: slurm
+  status: verified
+  source: "pipeline-debug checklist, step 1"
+
+- id: stale-cached-yaml
+  symptom: "A config fix is made but the pipeline still fails the same way."
+  cause: >
+    Pippin copies YAMLs into its output staging directory at runtime; a source-YAML
+    fix isn't picked up if a prior copy was already cached for that stage.
+  fix: >
+    diff <source_yaml> <pippin_output_dir>/<stage>/<cached_yaml> — if they differ,
+    fix the cached copy directly or force a rerun of that stage.
+  scope: universal
+  status: verified
+  source: "pipeline-debug checklist, step 2 — most common false 'the fix didn't work' report"

@@ -1,0 +1,16 @@
+[project]
+name = "snana-assistant"
+version = "0.1.0"
+description = "LLM-based ops assistant for SNANA/Pippin pipelines"
+requires-python = ">=3.10"
+dependencies = ["anthropic>=0.125.0", "pyyaml>=6.0"]
+
+[project.scripts]
+snana-assistant = "snana_assistant.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
