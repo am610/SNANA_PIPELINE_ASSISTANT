@@ -65,3 +65,38 @@ class KnowledgeBase:
     def all_as_context(self, scopes: tuple[str, ...] = ("universal", "slurm", "perlmutter")) -> str:
         blocks = [e.as_context_block() for e in self.entries if e.scope in scopes]
         return "\n\n".join(blocks)
+
+    def promote(self, entry_id: str, path: Path | str = DEFAULT_KNOWLEDGE_PATH) -> bool:
+        """Promotes an entry from unverified to verified and saves it back to the YAML file."""
+        found = False
+        for entry in self.entries:
+            if entry.id == entry_id:
+                if entry.status == "verified":
+                    print(f"Entry '{entry_id}' is already verified.")
+                    return False
+                entry.status = "verified"
+                found = True
+                break
+        
+        if not found:
+            print(f"Error: Entry '{entry_id}' not found in the knowledge base.")
+            return False
+
+        # Save back to YAML
+        raw_list = []
+        for e in self.entries:
+            raw_list.append({
+                "id": e.id,
+                "symptom": e.symptom,
+                "cause": e.cause,
+                "fix": e.fix,
+                "scope": e.scope,
+                "status": e.status,
+                "source": e.source
+            })
+        
+        with open(path, "w") as f:
+            yaml.safe_dump(raw_list, f, sort_keys=False, default_flow_style=False)
+            
+        return True
+

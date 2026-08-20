@@ -14,14 +14,14 @@ except ImportError:
 class AnthropicBackend(Backend):
     """Native Anthropic tool-use format — TOOL_SCHEMAS is already shaped this way."""
 
-    def __init__(self, model: str = "claude-sonnet-5", api_key: str | None = None):
+    def __init__(self, model: str | None = None, api_key: str | None = None):
         if anthropic is None:
             raise RuntimeError("anthropic package not installed — pip install 'snana-assistant[anthropic]'")
         key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not key:
             raise RuntimeError("ANTHROPIC_API_KEY not set.")
         self.client = anthropic.Anthropic(api_key=key)
-        self.model = model
+        self.model = model or os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 
     def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6) -> str:
         messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]

@@ -62,12 +62,127 @@ def read_log_tail(log_path: str, n_lines: int = 200) -> str:
     return header + "\n".join(tail[-80:])  # cap raw tail shown to keep context bounded
 
 
+def search_manual(query: str, manual_path: str = "/global/homes/a/ayanmitr/SNANA/doc/snana_manual.tex", window: int = 15) -> str:
+    """Search the SNANA LaTeX manual for relevant sections or parameters."""
+    p = Path(manual_path)
+    if not p.exists():
+        return f"Manual file not found at {manual_path}."
+        
+    try:
+        content = p.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"Error reading manual: {e}"
+        
+    lines = content.splitlines()
+    query_lower = query.lower()
+    
+    # Find all line indices containing the query
+    matches = []
+    for idx, line in enumerate(lines):
+        if query_lower in line.lower():
+            matches.append(idx)
+            
+    if not matches:
+        return f"No occurrences of '{query}' found in the SNANA manual."
+        
+    # Group match indices that are close to each other
+    groups = []
+    current_group = []
+    for idx in matches:
+        if not current_group or idx - current_group[-1] < window:
+            current_group.append(idx)
+        else:
+            groups.append(current_group)
+            current_group = [idx]
+    if current_group:
+        groups.append(current_group)
+        
+    # For each group, extract context window
+    chunks = []
+    # Cap at top 4 groups to keep prompt context clean
+    for g in groups[:4]:
+        start = max(0, g[0] - window)
+        end = min(len(lines), g[-1] + window + 1)
+        chunk_lines = []
+        for i in range(start, end):
+            # Highlight matching lines with a prefix
+            prefix = "MATCH >>> " if i in g else "          "
+            chunk_lines.append(f"{prefix}{i+1}: {lines[i]}")
+        chunks.append(f"--- Context (lines {start+1} to {end}) ---\n" + "\n".join(chunk_lines))
+        
+    result = f"Found {len(matches)} matches in {len(groups)} distinct sections of the manual.\n\n"
+    result += "\n\n".join(chunks)
+    
+    if len(result) > 15000:
+        result = result[:15000] + "\n... [TRUNCATED] ..."
+    return result
+
+
 def search_knowledge(query: str, kb: KnowledgeBase) -> str:
     """Searches the structured failure-mode knowledge base."""
     results = kb.search(query)
     if not results:
         return "No matching entries in the knowledge base."
     return "\n\n".join(e.as_context_block() for e in results)
+
+
+def search_gotchas(query: str, gotchas_dir: str = "~/.claude/snana-knowledge", window: int = 10) -> str:
+    """Search the user's custom gotchas and SNANA knowledge files (~/.claude/snana-knowledge/*.md)."""
+    base_path = Path(gotchas_dir).expanduser()
+    if not base_path.exists():
+        return f"Gotchas directory not found at {gotchas_dir}."
+        
+    md_files = list(base_path.glob("*.md"))
+    if not md_files:
+        return "No gotcha files found."
+        
+    query_lower = query.lower()
+    matches = []
+    
+    for fpath in md_files:
+        try:
+            content = fpath.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+            
+        lines = content.splitlines()
+        file_matches = []
+        for idx, line in enumerate(lines):
+            if query_lower in line.lower():
+                file_matches.append(idx)
+                
+        if not file_matches:
+            continue
+            
+        # Group match indices
+        groups = []
+        current_group = []
+        for idx in file_matches:
+            if not current_group or idx - current_group[-1] < window:
+                current_group.append(idx)
+            else:
+                groups.append(current_group)
+                current_group = [idx]
+        if current_group:
+            groups.append(current_group)
+            
+        # Extract context
+        for g in groups[:3]:  # cap at top 3 per file
+            start = max(0, g[0] - window)
+            end = min(len(lines), g[-1] + window + 1)
+            chunk = []
+            for i in range(start, end):
+                prefix = "MATCH >>> " if i in g else "          "
+                chunk.append(f"{prefix}{i+1}: {lines[i]}")
+            matches.append(f"[{fpath.name} (lines {start+1}-{end})]:\n" + "\n".join(chunk))
+            
+    if not matches:
+        return f"No occurrences of '{query}' found in your gotchas folder."
+        
+    result = f"Found matches in your gotchas folder:\n\n" + "\n\n".join(matches)
+    if len(result) > 15000:
+        result = result[:15000] + "\n... [TRUNCATED] ..."
+    return result
 
 
 TOOL_SCHEMAS = [
@@ -109,6 +224,28 @@ TOOL_SCHEMAS = [
             "required": ["query"],
         },
     },
+    {
+        "name": "search_manual",
+        "description": "Search the raw LaTeX source of the SNANA Manual for details on command options, config parameters, and program operations.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The parameter name, command, or option to search for (e.g. 'OPT_PHOTOZ', 'NBR_LIST', 'sigmb_biascor')."}
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "search_gotchas",
+        "description": "Search the user's personal/custom SNANA and Pippin gotchas, tips, and session logs (~/.claude/snana-knowledge/*.md) for specific error resolutions, directory pathways, or cluster configurations.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The gotcha topic or error string to search for (e.g. 'Euclid', 'scone', 'zHOST')."}
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 
@@ -119,4 +256,8 @@ def make_dispatch(kb: KnowledgeBase):
         "diff_config": lambda **kw: diff_config(**kw),
         "read_log_tail": lambda **kw: read_log_tail(**kw),
         "search_knowledge": lambda **kw: search_knowledge(kb=kb, **kw),
+        "search_manual": lambda **kw: search_manual(**kw),
+        "search_gotchas": lambda **kw: search_gotchas(**kw),
     }
+
+

@@ -126,3 +126,10 @@ for now. Worth revisiting as a plugin if this gets real outside adoption.
   **https://github.com/am610/SNANA_PIPELINE_ASSISTANT (private)**. Verified clean
   tree (no .venv, no grant_applications/, no build artifacts). Next: real
   end-to-end diagnose() run with an API key, then Phase 1.5.
+- 2026-08-20 (session 4) — (Antigravity) Built [run_eval.py](file:///pscratch/sd/a/ayanmitr/SNANA_PIPELINE_ASSISTANT/eval/run_eval.py), added delay/retry handling for API rate limits, downloaded 1,294 raw closed issues, and extracted 807 candidates. Manually curated 2 new entries in [entries.yaml](file:///pscratch/sd/a/ayanmitr/SNANA_PIPELINE_ASSISTANT/knowledge/entries.yaml) and test cases in [cases.yaml](file:///pscratch/sd/a/ayanmitr/SNANA_PIPELINE_ASSISTANT/eval/cases.yaml). Linked Claude Code skill to persistent home space, and added local/Ollama and CLI promotion support. Successfully executed the 10-case evaluation suite using the Anthropic backend (`claude-sonnet-5`) achieving a **100% success rate (10/10 passed)**. Configured automatic `.env` config loading and optimized CLI startup latency by 40x (from 4.7s down to 0.1s) using lazy backend imports.
+
+
+
+
+
+

@@ -8,6 +8,7 @@ Sanity-check against current Google docs before relying on it.
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Callable
 
 from .base import Backend
@@ -31,7 +32,7 @@ def _to_gemini_tool(tool_schemas: list[dict[str, Any]]) -> "types.Tool":
 
 
 class GeminiBackend(Backend):
-    def __init__(self, model: str = "gemini-2.5-pro", api_key: str | None = None):
+    def __init__(self, model: str = "gemini-3.6-flash", api_key: str | None = None):
         if genai is None:
             raise RuntimeError("google-genai package not installed — pip install 'snana-assistant[gemini]'")
         key = api_key or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
@@ -47,9 +48,23 @@ class GeminiBackend(Backend):
             types.Content(role="user", parts=[types.Part(text=user_message)])
         ]
         for _ in range(max_turns):
-            response = self.client.models.generate_content(
-                model=self.model, contents=contents, config=config,
-            )
+            retries = 5
+            backoff = 15
+            for attempt in range(retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=self.model, contents=contents, config=config,
+                    )
+                    break
+                except Exception as exc:
+                    if "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc):
+                        if attempt == retries - 1:
+                            raise
+                        print(f"\n[Rate Limit] Hit 429. Retrying in {backoff} seconds (attempt {attempt+1}/{retries})...")
+                        time.sleep(backoff)
+                        backoff *= 2
+                    else:
+                        raise
             candidate = response.candidates[0]
             function_calls = [p.function_call for p in candidate.content.parts if p.function_call]
             if not function_calls:

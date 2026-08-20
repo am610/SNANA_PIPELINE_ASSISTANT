@@ -48,3 +48,16 @@
     I fixed a typo in my sim input YAML but Pippin fails the exact same way it
     did before the fix.
   expected_entry: stale-cached-yaml
+
+- query: >
+    My simulation crashed mid-run with an abort called by GEN_SNHOST_DDLR
+    complaining about a "Crazy SN-galaxy sep = 1841.1 arcsec". I tried to increase
+    the job memory limit to 20GB but it still fails the exact same way.
+  expected_entry: hostlib-nbrlist-crazy-sep
+
+- query: >
+    I notice that some of the rows in my simulation dump file end with 3 integers,
+    but other rows end with only 2 integers. This misalignment seems to cause
+    NaNs in my FLAG_ACCEPT column.
+  expected_entry: dump-alignment-mismatch
+
