@@ -85,3 +85,18 @@ Started: 2026-08-20.
   unconfirmed. AAG deadline confirmed (Oct 1, 2026 window opens). Simons SSRF cycle
   already closed for this year. See `GRANTS.md` for full detail. Next: decide whether
   to draft the Sloan LOI before or alongside starting Phase 1 code.
+- 2026-08-20 (session 3) — Sloan LOI drafted (`grant_applications/`, gitignored —
+  not in the repo history). Phase 1 code scaffold built and committed: knowledge
+  loader, 4 tools (squeue, config diff, log tail, KB search) mapped onto the
+  pipeline-debug checklist, BYOK Claude tool-use agent loop, CLI, 8-case eval seed
+  set. Tools tested against live squeue and synthetic files — all working. Agent
+  loop itself untested (no ANTHROPIC_API_KEY in this environment yet). Git repo
+  initialized locally, not yet pushed to GitHub. Also logged Phase 1.5 (SNANA
+  GitHub issue history as a knowledge-base seed corpus, ~1,749 closed issues,
+  confirmed via `gh api`) as a concrete next-after-Phase-1 item.
+  **Next: set ANTHROPIC_API_KEY and do a real end-to-end diagnose() run, then
+  decide whether to push the repo to GitHub (private first) or start Phase 1.5.**
+- 2026-08-20 (session 3, continued) — Pushed to
+  **https://github.com/am610/SNANA_PIPELINE_ASSISTANT (private)**. Verified clean
+  tree (no .venv, no grant_applications/, no build artifacts). Next: real
+  end-to-end diagnose() run with an API key, then Phase 1.5.
