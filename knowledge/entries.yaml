@@ -124,3 +124,64 @@
   scope: universal
   status: verified
   source: 'GitHub Issue #1618'
+- id: negative-redshift-lcfit-photoz
+  symptom: SNe passing LCFIT with fitted redshift z=0 (or negative zCMB) when using
+    photo-z priors, causing downstream errors in BBC. Occurs only with LCFIT+z when
+    photo-z estimates are far from true spectroscopic redshift.
+  cause: Photo-z priors that are pathologically far from true redshift (e.g., photo-z~0.2
+    when zSpec~0.8) result in degenerate fits where stretched parameters absorb the
+    redshift difference, allowing unphysical fitted z=0 solutions. Default PRIOR_ZERRSCALE=1000
+    effectively flattens the photo-z prior, and incorrect header variable names (HOSTGAL_ZPHOT
+    vs HOSTGAL_PHOTOZ) prevent proper prior application.
+  fix: '1) Use correct header override variable names: HOSTGAL_PHOTOZ and HOSTGAL_PHOTOZ_ERR
+    instead of HOSTGAL_ZPHOT/HOSTGAL_ZPHOTERR. 2) Set PRIOR_ZERRSCALE=1.0 (not default
+    1000) when using photo-z mean/STD as prior. 3) Apply combination cuts on FITPROB,
+    color, and stretch parameters to reject pathological fits. 4) Consider CUTWIN_REDSHIFT
+    and FITWIN_PROB cuts, though these alone are insufficient for pathological cases.'
+  scope: universal
+  status: unverified
+  source: 'GitHub Issue #1157'
+- id: snn-classifier-filter-naming-mismatch
+  symptom: 'SuperNNovaClassifier fails during Pippin analysis with ValueError during
+    HDF5 loading: "shape mismatch: value array of shape (26,9) could not be broadcast
+    to indexing result of shape (1,26)". Occurs when applying models trained with
+    single-character filter names (g, r, i, z) to data with full filter strings (DES-g,
+    DES-r, DES-i, DES-z), or vice versa.
+
+    '
+  cause: 'Recent simulation update changed filter string format from single-character
+    representation (e.g., ''g'') to full filter strings (e.g., ''DES-g''). SNN models
+    trained with one format fail when applied to data with the other format due to
+    filter name mismatch causing shape incompatibility in feature arrays during HDF5
+    data loading.
+
+    '
+  fix: '1) Ensure consistent filter naming between training and test data. In Pippin
+    analysis.yml, explicitly specify LIST_FILTERS matching the data format (e.g.,
+    `--list_filters g i r z` for single-char or `--list_filters DES-g DES-r DES-i
+    DES-z` for full strings).
+
+    2) For DES 5-year backward compatibility, use SuperNNova branch SNANA_DES5yr which
+    includes a patch allowing models trained with single-char filters to be applied
+    to DES-prefixed filter data.
+
+    '
+  scope: universal
+  status: unverified
+  source: 'GitHub Issue #1449'
+- id: segfault-lightcurve-generation-uninitialized-mwxt-table
+  symptom: 'Segmentation fault during light curve generation in INTEG_zSED_SALT2,
+    occurring after ''Begin Generating Lightcurves'' message. Crash happens during
+    genSpec_SALT2 call when processing redshift z~1.3. Stack trace shows: INTEG_zSED_SALT2
+    -> genSpec_SALT2 -> GENSPEC_TRUE -> GENSPEC_DRIVER -> main'
+  cause: fill_TABLE_MWXT_SEDMODEL() is called from genmag_SALT2 only when event has
+    bands within SALT2 model range. For events with no bands in range (e.g., high-z
+    events), the MWXT table is never allocated or filled. Subsequently, genSpec_SALT2
+    is called and attempts to use the uninitialized MWXT table, causing a segmentation
+    fault.
+  fix: Call fill_TABLE_MWXT_SEDMODEL() from genSpec_SALT2 with a guard to do nothing
+    if already called from genmag_SALT2. This ensures the MWXT table is always allocated
+    and filled before genSpec_SALT2 uses it.
+  scope: universal
+  status: unverified
+  source: 'GitHub Issue #1248'

@@ -61,3 +61,21 @@
     NaNs in my FLAG_ACCEPT column.
   expected_entry: dump-alignment-mismatch
 
+- query: >
+    I have an LCFIT job that runs successfully but later causes errors in BBC
+    because some SNe make it through with zHEL=0 (fitted redshift of 0). This
+    happens in my photo-z fit runs.
+  expected_entry: negative-redshift-lcfit-photoz
+
+- query: >
+    My Pippin analysis run fails during the SuperNNovaClassifier stage. The log
+    shows "ValueError: shape mismatch: value array of shape (26,9) could not be
+    broadcast to indexing result of shape (1,26)" during HDF5 loading.
+  expected_entry: snn-classifier-filter-naming-mismatch
+
+- query: >
+    My light curve simulation is crashing with a segmentation violation. The
+    stack trace shows the crash occurs at INTEG_zSED_SALT2 called from
+    genSpec_SALT2 after the "Begin Generating Lightcurves" message.
+  expected_entry: segfault-lightcurve-generation-uninitialized-mwxt-table
+
