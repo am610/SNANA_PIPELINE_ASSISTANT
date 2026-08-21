@@ -1,5 +1,6 @@
 # SNANA Pipeline Assistant
 
+[![Documentation Status](https://readthedocs.org/projects/snana-pipeline-assistant/badge/?version=latest)](https://snana-pipeline-assistant.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Test Suite](https://img.shields.io/badge/Evaluation--Harness-100%25%20Passed-success)](eval/results.md)
 
