@@ -27,5 +27,6 @@ class Backend(ABC):
         tool_schemas: list[dict[str, Any]],
         dispatch: dict[str, Callable[..., str]],
         max_turns: int = 6,
+        max_tokens: int = 1024,
     ) -> str:
         ...

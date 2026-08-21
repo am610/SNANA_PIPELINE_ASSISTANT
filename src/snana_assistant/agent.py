@@ -13,7 +13,7 @@ from pathlib import Path
 
 from .backends.base import Backend
 from .knowledge import KnowledgeBase
-from .tools import TOOL_SCHEMAS, make_dispatch
+from .tools import TOOL_SCHEMAS, SETUP_TOOL_SCHEMAS, make_dispatch, make_setup_dispatch
 
 
 def _load_env() -> None:
@@ -54,6 +54,33 @@ Operational vs. Lookup Queries:
 - If the user is asking an informational, general, or parameter lookup question (e.g. explaining what a config parameter does, or how a command option works), call `search_knowledge`, `search_gotchas`, and/or `search_manual` immediately on the very first turn.
 
 If nothing matches the search_knowledge database, search the user's personal gotchas folder (search_gotchas) and the official SNANA manual (search_manual) for matching topics, error strings, or keywords. If still nothing matches, say so explicitly rather than guessing.
+"""
+
+
+SETUP_SYSTEM_PROMPT = """You are a SNANA/Pippin pipeline SETUP assistant. Your job is to draft a
+new Pippin job/pipeline config from the user's own past project templates, adapted to their
+new request. You do NOT diagnose failures here -- you scaffold new working configs.
+
+Follow this order, every time:
+1. Call search_templates with a description of the kind of job being set up (survey, spec-z vs
+   photo-z, sim vs full pipeline, Ia-only vs contamination, etc.) to find the closest matching
+   past project to adapt. If nothing matches, say so and ask the user for more to go on rather
+   than inventing a config from nothing.
+2. Adapt the matched template's content to the new request: change GENVERSION names, survey-
+   specific parameters, paths, etc. Keep everything else that isn't specific to the change.
+3. SELF-CHECK the adapted draft against the curated failure-mode knowledge base
+   (search_knowledge), the SNANA manual (search_manual), and personal gotchas (search_gotchas)
+   before finalizing -- specifically check things like: HOSTLIB_DZTOL tightness, missing
+   GENPDF/AsymGauss blocks for the model in use (BS20/C11 need x1 AsymGauss without a
+   GENPDF_FILE), GENVERSION string length (72-char SNANA limit, also watch Pippin's derived
+   name which is longer), and any other match relevant to the drafted parameters. Fix anything
+   the self-check catches BEFORE writing files, and mention what you fixed in your final summary.
+4. Call write_project_files exactly once, with the final file set, to the output_dir given in
+   the user's request. This tool refuses to overwrite an existing non-empty directory -- if it
+   refuses, tell the user rather than trying to force it.
+5. Never call any job-submission command. This assistant only drafts and writes files for the
+   user to review -- report clearly that nothing was submitted and the user should review the
+   files themselves before running pippin.sh.
 """
 
 def _get_backend_class(provider: str):
@@ -97,6 +124,7 @@ class Agent:
     def __init__(self, kb: KnowledgeBase | None = None, backend: Backend | None = None, provider: str | None = None):
         self.kb = kb or KnowledgeBase.load()
         self.dispatch = make_dispatch(self.kb)
+        self.setup_dispatch = make_setup_dispatch(self.kb)
         if backend is not None:
             self.backend = backend
         elif provider is not None:
@@ -119,5 +147,22 @@ class Agent:
         if not has_citation:
             from .config import log_uncaptured_query
             log_uncaptured_query(user_message)
-            
+
         return response
+
+    def setup_job(self, request: str, output_dir: str, max_turns: int = 20) -> str:
+        """Job-setup mode (Phase: personal templates + scaffold-new-project).
+        Drafts a new Pippin job from the user's own indexed templates, self-checks
+        against the knowledge base/manual/gotchas, and writes to output_dir --
+        never overwrites an existing directory, never submits anything.
+
+        max_tokens is much larger than diagnose()'s default: a diagnose() answer
+        is a short citation + explanation, but a write_project_files call has to
+        carry full drafted config file content as tool-call arguments -- 1024
+        tokens (diagnose()'s implicit default) isn't enough room for that and
+        silently truncates the response before the write tool ever gets called."""
+        user_message = f"{request}\n\noutput_dir: {output_dir}"
+        return self.backend.diagnose(
+            SETUP_SYSTEM_PROMPT, user_message, SETUP_TOOL_SCHEMAS, self.setup_dispatch,
+            max_turns=max_turns, max_tokens=8192,
+        )

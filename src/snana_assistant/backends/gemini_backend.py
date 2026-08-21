@@ -41,9 +41,9 @@ class GeminiBackend(Backend):
         self.client = genai.Client(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6, max_tokens=1024) -> str:
         tool = _to_gemini_tool(tool_schemas)
-        config = types.GenerateContentConfig(system_instruction=system_prompt, tools=[tool])
+        config = types.GenerateContentConfig(system_instruction=system_prompt, tools=[tool], max_output_tokens=max_tokens)
         contents: list[types.Content] = [
             types.Content(role="user", parts=[types.Part(text=user_message)])
         ]

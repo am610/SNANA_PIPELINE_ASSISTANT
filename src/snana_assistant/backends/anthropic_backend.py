@@ -23,13 +23,13 @@ class AnthropicBackend(Backend):
         self.client = anthropic.Anthropic(api_key=key)
         self.model = model or os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6, max_tokens=1024) -> str:
         messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
         text_responses = []
         for _ in range(max_turns):
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=max_tokens,
                 system=system_prompt,
                 tools=tool_schemas,
                 messages=messages,

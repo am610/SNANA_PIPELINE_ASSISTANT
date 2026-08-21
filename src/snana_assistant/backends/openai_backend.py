@@ -38,7 +38,7 @@ class OpenAIBackend(Backend):
         self.client = OpenAI(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6, max_tokens=1024) -> str:
         tools = _to_openai_tools(tool_schemas)
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system_prompt},
@@ -47,7 +47,7 @@ class OpenAIBackend(Backend):
         text_responses = []
         for _ in range(max_turns):
             response = self.client.chat.completions.create(
-                model=self.model, messages=messages, tools=tools,
+                model=self.model, messages=messages, tools=tools, max_completion_tokens=max_tokens,
             )
             msg = response.choices[0].message
             turn_text = (msg.content or "").strip()

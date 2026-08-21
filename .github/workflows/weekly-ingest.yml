@@ -1,52 +1,58 @@
-name: Weekly knowledge base ingestion
-
-# Phase 2(a): finds newly-closed issues on RickKessler/SNANA since the last
-# run, summarizes high-signal ones into entries.yaml as status: unverified,
-# and opens a PR (review gate before anything is trusted/promoted -- see
-# ROADMAP.md Phase 2).
-#
-# Requires an ANTHROPIC_API_KEY repo secret (Ayan's decision, 2026-08-21: reuse
-# his existing key, accepted it bills his account for these runs indefinitely).
-# This workflow will fail at the "Run sync" step until that secret exists --
-# expected, not a bug; adding it is a manual step only a repo admin can do.
+name: Weekly Ingestion Sync
 
 on:
   schedule:
-    - cron: "0 13 * * 1" # Mondays 13:00 UTC
-  workflow_dispatch: {}
+    # Run every Sunday at midnight
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # Required: this repo's default GITHUB_TOKEN permission is "read" (checked
+    # via `gh api repos/.../actions/permissions/workflow`), so without this
+    # block the "Create Pull Request" step below 403s the first time it
+    # actually tries to push a branch and open a PR.
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.11'
+          cache: 'pip'
 
-      - name: Install package
-        run: pip install -e ".[anthropic]"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[all]
 
-      - name: Run sync
+      - name: Run sync script
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python knowledge/sync_new_issues.py
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 knowledge/sync_new_issues.py
 
-      - name: Open PR if anything changed
+      - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: "Weekly knowledge base sync: newly-closed SNANA issues"
-          title: "Weekly ingestion: new unverified entries from closed SNANA issues"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Weekly sync: ingest newly-closed failure modes"
+          title: "Weekly Ingest: New Unverified Failure Modes"
           body: |
-            Automated Phase 2(a) run. New entries (if any) are added as
-            `status: unverified` -- review before promoting, per the
-            review-gated design in `ROADMAP.md` Phase 2.
-          branch: auto/weekly-issue-sync
-          labels: unverified-failure
+            Automated ingestion sync completed. 
+            
+            This PR adds newly-closed issues from `RickKessler/SNANA` that match the high-signal threshold criteria as `status: unverified` entries.
+            
+            ### Actions required:
+            1. Review new entries in `knowledge/entries.yaml` for correctness.
+            2. Run evaluation harness: `python3 eval/run_eval.py` to confirm no regressions.
+            3. Promote verified entries using `snana-assistant promote <id>`.
+          branch: "weekly-ingest-sync"
+          delete-branch: true
+          labels: "unverified-failure"

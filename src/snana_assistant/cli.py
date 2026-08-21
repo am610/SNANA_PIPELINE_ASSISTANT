@@ -47,6 +47,25 @@ def main() -> None:
 
     feedback_p = sub.add_parser("feedback", help="Provide feedback or report an uncaptured failure mode.")
 
+    index_p = sub.add_parser(
+        "index-project",
+        help="Index a Pippin project's config files locally as job-setup templates. "
+             "Stays on your machine only -- never uploaded, never part of the public repo.",
+    )
+    index_p.add_argument("path", help="Path to the Pippin project directory to index.")
+    index_p.add_argument("--name", required=True, help="A short name to refer to this project by later.")
+
+    setup_p = sub.add_parser(
+        "setup",
+        help="Draft a new Pippin job from your own indexed project templates. "
+             "Writes to a new, empty output directory only -- never overwrites anything, never submits a job.",
+    )
+    setup_p.add_argument("description", help="Describe the job to set up, in your own words.")
+    setup_p.add_argument("--output-dir", required=True, help="A new (or empty) directory to write the drafted files into.")
+    setup_p.add_argument(
+        "--provider", choices=["anthropic", "openai", "gemini", "local", "ollama"], default=None,
+    )
+
     args = parser.parse_args()
 
     if args.command == "diagnose":
@@ -211,6 +230,24 @@ def main() -> None:
         print("\nYou can submit this failure mode to the knowledge base by opening the pre-filled URL below in your browser:")
         print(f"\n  {url}\n")
         print("Once verified by a maintainer, this issue will be merged into the official knowledge base.")
+    elif args.command == "index-project":
+        from . import templates
+        try:
+            summary = templates.index_project(Path(args.path), args.name)
+        except FileNotFoundError as exc:
+            print(str(exc), file=sys.stderr)
+            sys.exit(1)
+        print(f"Indexed project '{summary['project']}':")
+        print(f"  {summary['templates_copied']} config file(s) copied to ~/.config/snana-assistant/templates/{summary['project']}/")
+        print(f"  {summary['data_files_referenced']} data file(s) (SIMLIB/HOSTLIB) referenced by path only, not copied")
+        print("\nThis data stays on your machine only -- never uploaded, never part of the public repo.")
+    elif args.command == "setup":
+        try:
+            agent = Agent(provider=args.provider)
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            sys.exit(1)
+        print(agent.setup_job(args.description, args.output_dir))
 
 
 

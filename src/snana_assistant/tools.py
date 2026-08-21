@@ -235,6 +235,56 @@ def search_gotchas(query: str, gotchas_dir: str | None = None, window: int = 10)
     return result
 
 
+def search_templates(query: str) -> str:
+    """Job-setup mode only. Searches the user's own locally-indexed Pippin
+    project templates (never the public knowledge base) for the closest
+    matching past config to adapt. See templates.py -- this data never
+    leaves the user's machine."""
+    from . import templates
+
+    results = templates.search(query)
+    if not results:
+        projects = templates.list_projects()
+        hint = f" Indexed projects: {', '.join(projects)}." if projects else " No projects indexed yet -- run `snana-assistant index-project <path> --name <name>` first."
+        return "No matching templates found." + hint
+
+    blocks = []
+    for e in results:
+        content = templates.read_template(e["stored_path"])
+        if len(content) > 4000:
+            content = content[:4000] + "\n... [TRUNCATED, read full file at stored_path if needed] ..."
+        params = e.get("key_params", {})
+        blocks.append(
+            f"[project={e['project']}, file={e['relative_path']}]\n"
+            f"key_params: {params}\n"
+            f"--- content ---\n{content}"
+        )
+    return "\n\n".join(blocks)
+
+
+def write_project_files(output_dir: str, files: dict) -> str:
+    """Job-setup mode only. Writes a NEW project's draft config files.
+    Refuses if output_dir already exists and is non-empty -- this tool can
+    scaffold a fresh project, never overwrite or modify an existing one, and
+    never submits any job. `files` is {relative_path: content}."""
+    out = Path(output_dir).expanduser()
+    if out.exists() and any(out.iterdir()):
+        return f"Refused: {out} already exists and is not empty. Choose a new, empty output directory."
+
+    out.mkdir(parents=True, exist_ok=True)
+    written = []
+    for rel_path, content in files.items():
+        dest = out / rel_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content)
+        written.append(str(dest))
+
+    return (
+        f"Wrote {len(written)} file(s) to {out}:\n" + "\n".join(f"  - {w}" for w in written) +
+        "\n\nNothing was submitted. Review these files, then run pippin.sh yourself when ready."
+    )
+
+
 TOOL_SCHEMAS = [
     {
         "name": "check_job_status",
@@ -299,6 +349,62 @@ TOOL_SCHEMAS = [
 ]
 
 
+SETUP_TOOL_SCHEMAS = [
+    {
+        "name": "search_templates",
+        "description": "Search the user's own locally-indexed past Pippin project configs for the closest match to adapt for a new job. Always call this first in setup mode.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"query": {"type": "string", "description": "Describe the kind of job/survey/pipeline stage being set up."}},
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "search_knowledge",
+        "description": "Search the curated SNANA/Pippin failure-mode knowledge base. Use this to self-check drafted parameters (e.g. HOSTLIB_DZTOL, GENPDF/AsymGauss blocks, GENVERSION length) against known failure modes before finalizing.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "search_manual",
+        "description": "Search the SNANA manual for parameter details while drafting the config.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "search_gotchas",
+        "description": "Search the user's personal gotchas/session notes for relevant setup precedent.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "write_project_files",
+        "description": "Write the final drafted config file(s) to a NEW, empty output directory. Refuses if the directory already exists and is non-empty. Never submits any job. Call this exactly once, after self-checking the draft.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "output_dir": {"type": "string"},
+                "files": {
+                    "type": "object",
+                    "description": "Map of relative file path -> full file content, e.g. {'my_pipeline.yml': '...', 'Inputs/sim.input': '...'}",
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+            "required": ["output_dir", "files"],
+        },
+    },
+]
+
+
 def make_dispatch(kb: KnowledgeBase):
     """Returns a {name: callable} dispatch table bound to a specific KnowledgeBase."""
     return {
@@ -308,6 +414,19 @@ def make_dispatch(kb: KnowledgeBase):
         "search_knowledge": lambda **kw: search_knowledge(kb=kb, **kw),
         "search_manual": lambda **kw: search_manual(**kw),
         "search_gotchas": lambda **kw: search_gotchas(**kw),
+    }
+
+
+def make_setup_dispatch(kb: KnowledgeBase):
+    """Dispatch table for job-setup mode -- adds search_templates and the
+    single scoped write tool, drops the diagnose-only tools (squeue/diff/log
+    tail aren't relevant to drafting a new job)."""
+    return {
+        "search_templates": lambda **kw: search_templates(**kw),
+        "search_knowledge": lambda **kw: search_knowledge(kb=kb, **kw),
+        "search_manual": lambda **kw: search_manual(**kw),
+        "search_gotchas": lambda **kw: search_gotchas(**kw),
+        "write_project_files": lambda **kw: write_project_files(**kw),
     }
 
 
