@@ -53,6 +53,15 @@ class KnowledgeBase:
 
     def search(self, query: str, scopes: tuple[str, ...] = ("universal", "slurm", "perlmutter"), top_k: int = 5) -> list[Entry]:
         """Lexical search using BM25 ranking (pure Python, Phase 1.7)."""
+        return [e for _, e in self.search_scored(query, scopes, top_k)]
+
+    def search_scored(self, query: str, scopes: tuple[str, ...] = ("universal", "slurm", "perlmutter"), top_k: int = 5) -> list[tuple[float, "Entry"]]:
+        """Same BM25 ranking as `search()`, but returns (score, Entry) pairs.
+
+        Factored out so callers that need the raw score (e.g. `dedup_report.py`,
+        which uses entry text as the "query" to find near-duplicate entries) reuse
+        this scoring instead of re-implementing a second similarity metric.
+        """
         import math
         from collections import Counter
 
@@ -134,7 +143,7 @@ class KnowledgeBase:
                 scored_entries.append((score, entry))
 
         scored_entries.sort(key=lambda pair: pair[0], reverse=True)
-        return [e for _, e in scored_entries[:top_k]]
+        return scored_entries[:top_k]
 
     def all_as_context(self, scopes: tuple[str, ...] = ("universal", "slurm", "perlmutter")) -> str:
         blocks = [e.as_context_block() for e in self.entries if e.scope in scopes]

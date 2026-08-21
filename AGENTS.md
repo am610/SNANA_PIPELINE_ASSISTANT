@@ -162,12 +162,18 @@ on the software — flagging for context only, in case asked.
 verified, see Status Log. `ROADMAP.md` is the source of truth if these ever
 disagree.)**
 
-1. **Phase 1.5b (new) — dedup/quality pass:** build `knowledge/dedup_report.py`
-   over the 106 `unverified` entries (reuse `knowledge.py`'s BM25 scoring against
-   itself, don't build a second similarity metric). Output a human-readable report
-   of candidate duplicate clusters + low-signal ("needs-more-detail") entries.
-   **Do not auto-merge or auto-delete** — the report is for human review, per the
-   project's "review before promotion" ground rule. See `ROADMAP.md` Phase 1.5b.
+1. ~~**Phase 1.5b — dedup/quality pass**~~ **DONE (2026-08-21, Claude Code).**
+   `knowledge/dedup_report.py` built and run — reused BM25 via a new
+   `KnowledgeBase.search_scored()` method (factored out of `search()`, no second
+   metric). Output: `knowledge/dedup_report.md`, 468 pairs ranked (no threshold
+   applied — human eyeballs the ranked list), top candidate (score 121.06) is
+   `negative-redshift-lcfit-photoz` vs `lcfit-failure-zero-photoz-error` — looks
+   like a genuine near-duplicate on inspection but **not yet merged/reviewed by
+   Ayan**. 2 low-signal entries flagged (`hostlib-dztol-too-tight`,
+   `sim-SNgrid-missing-perl-module`). Eval re-run after the `knowledge.py` refactor:
+   still 100% (20/20). **Next actual step here: Ayan reviews `dedup_report.md` and
+   decides which pairs to merge/demote — this is a human decision, not something
+   for an agent to do unprompted.**
 2. **Phase 2(a) — scheduled ingestion:** build `knowledge/sync_new_issues.py`
    (watermark-based, same filter+summarize path as existing scripts) and a
    `.github/workflows/weekly-ingest.yml` GitHub Actions cron that runs it and opens
