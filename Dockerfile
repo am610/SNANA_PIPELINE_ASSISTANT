@@ -20,7 +20,7 @@ COPY skill /app/skill
 RUN pip install --no-cache-dir .[all]
 
 # Expose package configs and entrypoint
-ENV PYTHONPATH="/app/src:${PYTHONPATH}"
+ENV PYTHONPATH=/app/src
 
 # Default entrypoint to the snana-assistant CLI
 ENTRYPOINT ["snana-assistant"]
