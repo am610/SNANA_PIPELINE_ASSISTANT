@@ -339,6 +339,28 @@ for now. Worth revisiting as a plugin if this gets real outside adoption.
   the GitHub Actions secret. Ayan hasn't personally reviewed `dedup_report.md` yet
   — worth doing at some point, though nothing was changed either way so there's no
   live risk.**
+- 2026-08-21 (session 9, Claude Code) — Built Phase 2(a): `knowledge/sync_new_issues.py`
+  + `.github/workflows/weekly-ingest.yml`. Refactored `ingest_issues.py` and
+  `batch_summarize.py` to expose `is_high_signal()`/`summarize_issue()` so the new
+  script reuses the existing filter/summarization logic rather than duplicating it
+  (verified both refactors behavior-preserving before building on them). State
+  (`.ingest_state.json`) tracks a *set* of already-seen issue numbers, not just a
+  date, since a low-numbered issue can close after a higher-numbered one — found 4
+  real examples of exactly this (#1590/#1689/#1698/#1709) by diffing live GitHub
+  data against the original 1,294-issue snapshot. Ran the script for real (local
+  key): correctly skipped #1590 (below signal threshold), summarized #1689 into a
+  new entry. KB now 121 entries. Eval re-run after: still 100% (20/20).
+  **Triggered the workflow live via `workflow_dispatch` and watched it run** — it
+  succeeded, but only exercised the "nothing new" no-op path (0 issues found,
+  since my local run had already advanced the watermark past today) — confirmed
+  `ANTHROPIC_API_KEY` is genuinely empty in that run's env, exactly as expected
+  with no secret set yet. **This means the actual LLM-summarization path has NOT
+  been proven inside GitHub Actions itself yet** — only locally. The first real
+  test of that path will be whenever a new issue closes on RickKessler/SNANA after
+  Ayan adds the secret. **The only remaining step is still Ayan's:
+  `gh secret set ANTHROPIC_API_KEY`, run locally so the key never appears in a
+  chat transcript.** Once that's done, no further code changes are needed — the
+  weekly cron (Mondays 13:00 UTC) and manual dispatch are both already live.
 
 
 
