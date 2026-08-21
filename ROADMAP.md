@@ -213,6 +213,38 @@ RAG-vs-fine-tuning take):
   AI-industry-pivot motivation stays exactly as separated from collaborator-facing
   material as it already is (see the private-context handling note in project memory)
 
+### Phase 6 — Personal job-setup mode (new, 2026-08-21)
+
+Different in kind from Phases 1-5: those build the *public* product (shared knowledge
+base, shared container/CLI). This phase is about a *personal* capability layered on
+top — drafting new Pippin jobs from a user's own past projects — that must stay
+architecturally separate from the public repo, since real project Inputs can contain
+embargoed or collaboration-sensitive science configs (verified concern, not
+hypothetical: the Euclid DDF work has an explicit no-submission-before-Oct-2026
+embargo per project memory).
+
+- **Local-only template index**: `snana-assistant index-project <path> --name <name>`
+  copies small text configs (`.yml`/`.input`/`.nml`) from a real project directory
+  into `~/.config/snana-assistant/templates/<name>/` — never uploaded, never package
+  data, never touches this git repo. Bulk data files (SIMLIB/HOSTLIB) are recorded as
+  path references only, never copied.
+- **Capability tier, decided explicitly (not a default):** generate + write to a new,
+  empty directory only. Never overwrites an existing directory, never submits a job.
+  Full automation (actually running `pippin.sh`/`sbatch`) is explicitly out of scope
+  for now — that's the Phase 3c tier (opt-in trusted mode) already deferred.
+- **Mandatory self-check**: before writing anything, the drafted config must be
+  checked against `search_knowledge`/`search_manual`/`search_gotchas` — a naive
+  template-fill risks reproducing exactly the mistakes already catalogued (missing
+  AsymGauss blocks, tight `HOSTLIB_DZTOL`, `GENVERSION` length). Verified this
+  actually works in practice, not just in the prompt: a live test correctly applied
+  the AGGREGATION+MERGE-stub gotcha for an Ia-only pipeline.
+- **Found + fixed while building this**: `AnthropicBackend` hardcoded
+  `max_tokens=1024` — fine for a diagnose() citation, not enough for a response that
+  has to carry full drafted file content as a tool-call argument. First live test
+  silently ran out of turns without ever calling the write tool. Added `max_tokens`
+  as a real parameter across `Backend.diagnose()` and all three backend
+  implementations; `setup_job()` now requests 8192.
+
 ## Distribution: two tiers, not "free vs. proper"
 
 Two ways to run this, with different guarantees — not a gimped-free-tier-to-upsell
