@@ -45,6 +45,8 @@ def main() -> None:
 
     init_p = sub.add_parser("init", help="Initialize and configure paths for SNANA/Pippin and local backends.")
 
+    feedback_p = sub.add_parser("feedback", help="Provide feedback or report an uncaptured failure mode.")
+
     args = parser.parse_args()
 
     if args.command == "diagnose":
@@ -169,6 +171,46 @@ def main() -> None:
         if config.get("LOCAL_API_BASE"):
             print(f"  LOCAL_API_BASE:      {config.get('LOCAL_API_BASE')}")
             print(f"  LOCAL_MODEL:         {config.get('LOCAL_MODEL')}")
+    elif args.command == "feedback":
+        from .config import get_last_uncaptured_query
+        import urllib.parse
+        
+        print("=== SNANA Pipeline Assistant Feedback & Contribution ===")
+        query = get_last_uncaptured_query()
+        
+        title = "Uncaptured Failure Mode"
+        if query:
+            print(f"Found last uncaptured query: '{query}'")
+            body = (
+                "I encountered a failure mode that was not recognized by the SNANA Pipeline Assistant.\n\n"
+                "### User Query / Symptom:\n"
+                f"```\n{query}\n```\n\n"
+                "### Suggested Cause:\n"
+                "[Explain what caused the failure]\n\n"
+                "### Suggested Fix:\n"
+                "[Explain how to fix it]\n"
+            )
+        else:
+            print("No local uncaptured queries found.")
+            body = (
+                "### User Query / Symptom:\n"
+                "[Paste query/symptom/error log here]\n\n"
+                "### Suggested Cause:\n"
+                "[Explain what caused the failure]\n\n"
+                "### Suggested Fix:\n"
+                "[Explain how to fix it]\n"
+            )
+            
+        params = {
+            "title": title,
+            "body": body,
+            "labels": "unverified-failure"
+        }
+        url = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT/issues/new?" + urllib.parse.urlencode(params)
+        
+        print("\nYou can submit this failure mode to the knowledge base by opening the pre-filled URL below in your browser:")
+        print(f"\n  {url}\n")
+        print("Once verified by a maintainer, this issue will be merged into the official knowledge base.")
 
 
 

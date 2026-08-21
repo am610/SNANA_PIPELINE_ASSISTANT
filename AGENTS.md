@@ -216,6 +216,7 @@ disagree.)**
   priority list is now a summary of that, not an independent source. **Next: start at
   item 1 above (Phase 1.5 at scale).**
 - 2026-08-21 — (Antigravity) Executed Phase 1.5 at scale: processed 103 distinct high-signal issues, scaling knowledge base from 15 to 120 entries under status: unverified. Implemented Phase 1.6: parsed and section-chunked snana_manual.tex into 279 chunks, and updated search_manual in tools.py to query this index using morphological scoring. Implemented Phase 1.7: upgraded search in knowledge.py to use pure Python BM25 lexical ranking with prefix-overlap morphological fallback, and fixed a multi-turn response text-loss bug in backends by accumulating turn outputs. Implemented Phase 1.8: added config command snana-assistant init with NERSC auto-detection and local Ollama model configuration, and bundled data files via pyproject.toml package data. Conducted Phase 3a read-only tool audit. Performed Phase 5 launch polish: generated LICENSE, CONTRIBUTING.md, and CHANGELOG.md, rewrote README.md with badges, and updated docs site. Added 5 new evaluation cases for newly ingested unverified issues, expanding test coverage from 15 to 20 cases. Fixed a schema drift bug by correcting status: fixed entries back to unverified. Removed absolute developer path fallback from tools.py and removed the premature PyPI version badge from README.md. Successfully ran evaluation suite verifying **100% success rate (20/20 passed)**.
+- 2026-08-21 — (Antigravity) Implemented Phase 2(b) usage-driven capture: added uncaptured query detection at the agent level (triggered when no curated bracket citation is returned) logging queries locally to `~/.config/snana-assistant/uncaptured_queries.log`. Created CLI command `snana-assistant feedback` which pulls the last uncaptured query, URL-encodes a pre-filled GitHub issue report template, and presents it to the user for opt-in contribution.
 - 2026-08-21 — (Claude Code) Verified the above session's claims by direct file
   inspection (entry counts, file diffs, grep for hardcoded paths, reading actual
   BM25/retrieval/backend code, not just the summary text) — all claims held up.
@@ -232,4 +233,36 @@ disagree.)**
   capture) is the next unstarted phase; a dedup/quality pass over the 106
   unverified entries is worth doing before ingesting further from the ~700
   remaining candidates.**
+- 2026-08-21 — (Claude Code) Platform-independence audit + Phase 2(b) verification.
+  **Audit:** found and fixed 2 real bugs — one entry had `scope: lsst` (not a valid
+  schema value; `KnowledgeBase.search()`'s default scope filter silently excluded it
+  from every search, so it was functionally dead), corrected to `universal`;
+  `knowledge/build_manual_index.py` had a hardcoded personal path, parameterized via
+  `SNANA_MANUAL_TEX_PATH`. **Confirmed platform independence is much further along
+  than documented:** `check_job_status()` already falls back squeue -> qstat -> a
+  graceful no-scheduler message; multi-provider + local Ollama backends already
+  exist. Built and ran the existing `Dockerfile` with podman — genuinely worked
+  end-to-end (real `diagnose()` call, correct citation). Added
+  `.github/workflows/publish-image.yml`: builds and pushes to
+  `ghcr.io/am610/snana-pipeline-assistant` on every push to main touching
+  Dockerfile/src/knowledge/skill, using the automatic `GITHUB_TOKEN` (no personal
+  secret needed, unlike Phase 2(a)). **Verified live, not assumed:** watched two
+  real workflow runs complete, then pulled the published image with zero cached
+  credentials and ran a real `diagnose()` call from it — works for a genuine
+  stranger with no NERSC account, right now. Fixed a Dockerfile lint warning found
+  along the way (undefined `$PYTHONPATH`).
+  **Also verified Phase 2(b) end-to-end:** ran a deliberately-unmatched query,
+  confirmed it landed in `uncaptured_queries.log`, ran `snana-assistant feedback`,
+  got a correctly pre-filled GitHub issue URL — but the URL requested a
+  `unverified-failure` label that didn't exist on the repo yet (GitHub silently
+  drops unknown labels, so real feedback issues would've landed untagged); created
+  the label. Read Antigravity's dedup-report review (declined to merge the top
+  candidate pair) directly against the raw entry text myself — reasoning holds up,
+  the two entries describe genuinely different root causes despite shared
+  vocabulary. **Note: that was Antigravity's judgment call, not Ayan's — worth Ayan
+  glancing at `dedup_report.md` himself at some point, though nothing was actually
+  changed so there's no live risk either way.**
+  **Current state: container image live and pullable by anyone; KB scope tags all
+  valid; Phase 2(a) (scheduled ingestion) is the last unstarted item on the original
+  priority list, still blocked on the GitHub Actions secret only Ayan can add.**
 

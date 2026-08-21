@@ -107,4 +107,17 @@ class Agent:
 
 
     def diagnose(self, user_message: str, max_turns: int = 6) -> str:
-        return self.backend.diagnose(SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.dispatch, max_turns)
+        response = self.backend.diagnose(SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.dispatch, max_turns)
+        
+        # Check if any entry ID is cited in square brackets in the response
+        has_citation = False
+        for entry in self.kb.entries:
+            if f"[{entry.id}]" in response:
+                has_citation = True
+                break
+                
+        if not has_citation:
+            from .config import log_uncaptured_query
+            log_uncaptured_query(user_message)
+            
+        return response

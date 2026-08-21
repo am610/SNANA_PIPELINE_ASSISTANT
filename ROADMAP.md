@@ -315,6 +315,31 @@ for now. Worth revisiting as a plugin if this gets real outside adoption.
   106 unverified entries before ingesting further from the ~700 remaining
   candidates, per Phase 1.5's own caution against bulk-ingesting noise.**
 - 2026-08-21 (session 7) — (Antigravity) Executed Phase 1.5 at scale: processed 103 distinct high-signal issues, scaling active knowledge base from 15 to 120 unverified entries. Implemented Phase 1.6: parsed and section-chunked LaTeX manual into 279 chunks, and updated search_manual in tools.py to query this index using morphological similarity matching. Implemented Phase 1.7: upgraded search in knowledge.py to use pure Python BM25 lexical search ranking method with morphological prefix-overlap matching as fallback, and fixed a multi-turn response text-loss bug in backends by accumulating turn outputs. Implemented Phase 1.8: added config wizard cli command snana-assistant init with NERSC auto-detection and local Ollama model configuration, and bundled data files via pyproject.toml package data. Conducted Phase 3a read-only tool audit. Performed Phase 5 launch polish: generated LICENSE, CONTRIBUTING.md, and CHANGELOG.md, rewrote README.md with badges, and updated docs site. Added 5 new evaluation cases for newly ingested unverified issues, expanding test coverage from 15 to 20 cases. Fixed a schema drift bug by correcting status: fixed entries back to unverified. Removed absolute developer path fallback from tools.py and removed the premature PyPI version badge from README.md. Successfully ran evaluation suite verifying **100% success rate (20/20 passed)**.
+- 2026-08-21 (session 7) — (Antigravity) Implemented Phase 2(b) usage-driven capture: added uncaptured query detection at the agent level (triggered when no curated bracket citation is returned) logging queries locally to `~/.config/snana-assistant/uncaptured_queries.log`. Created CLI command `snana-assistant feedback` which pulls the last uncaptured query, URL-encodes a pre-filled GitHub issue report template, and presents it to the user for opt-in contribution.
+- 2026-08-21 (session 8, Claude Code) — Platform-independence audit (Phase 3) +
+  Phase 2(b) verification. Found and fixed 2 bugs: invalid `scope: lsst` tag
+  (silently made an entry unreachable via `KnowledgeBase.search()`'s scope filter;
+  corrected to `universal`), hardcoded personal path in `build_manual_index.py`
+  (parameterized via `SNANA_MANUAL_TEX_PATH`). Confirmed multi-scheduler fallback
+  (squeue -> qstat -> graceful no-scheduler message) and multi-provider/local-Ollama
+  backends already existed. Built and ran the existing `Dockerfile` with podman —
+  real end-to-end `diagnose()` call worked. Added
+  `.github/workflows/publish-image.yml` (GHCR publish on push to main, uses the
+  automatic `GITHUB_TOKEN`, no personal secret needed unlike Phase 2(a)) — watched
+  two real runs complete, then pulled `ghcr.io/am610/snana-pipeline-assistant` with
+  zero cached credentials and ran a real `diagnose()` call from it. Fixed a
+  Dockerfile lint warning (undefined `$PYTHONPATH`) found along the way. Verified
+  Phase 2(b) live: unmatched query correctly logged, `snana-assistant feedback`
+  produced a correct pre-filled issue URL — except it referenced a GitHub label
+  (`unverified-failure`) that didn't exist yet; created it. Independently read the
+  two entries in Antigravity's declined-merge dedup-report call
+  (`negative-redshift-lcfit-photoz` vs `lcfit-failure-zero-photoz-error`) — holds up,
+  genuinely different root causes. **Next: Phase 2(a) (scheduled ingestion) is the
+  last unstarted item on the original priority list, still blocked on Ayan adding
+  the GitHub Actions secret. Ayan hasn't personally reviewed `dedup_report.md` yet
+  — worth doing at some point, though nothing was changed either way so there's no
+  live risk.**
+
 
 
 

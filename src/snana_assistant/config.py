@@ -31,3 +31,25 @@ def load_all_config_to_env() -> None:
     for k, v in config.items():
         if k not in os.environ and v is not None:
             os.environ[k] = str(v)
+
+
+def log_uncaptured_query(query: str) -> None:
+    log_path = Path("~/.config/snana-assistant/uncaptured_queries.log").expanduser()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, "a") as f:
+        f.write(query.strip() + "\n")
+
+
+def get_last_uncaptured_query() -> str | None:
+    log_path = Path("~/.config/snana-assistant/uncaptured_queries.log").expanduser()
+    if not log_path.exists():
+        return None
+    try:
+        with open(log_path) as f:
+            lines = f.readlines()
+        if lines:
+            return lines[-1].strip()
+    except Exception:
+        pass
+    return None
+
