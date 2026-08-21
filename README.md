@@ -69,3 +69,15 @@ DOE/HPC users wary of sending logs to external APIs can configure the tool to ru
 1. Start [Ollama](https://ollama.com/) locally: `ollama run llama3`
 2. Run `snana-assistant init` and select the local model as your default backend.
 3. Knowledge Base searches and SNANA LaTeX manual lookups run fully offline, zero-key, immediately after install.
+
+---
+
+## Contributing Feedback
+
+If the assistant cannot diagnose your issue, it logs the uncaptured query locally. You can generate a pre-filled, templated GitHub issue to submit the new failure mode for verification:
+
+```bash
+snana-assistant feedback
+```
+This command URL-encodes your query and generates a draft issue link, keeping your actual data private unless you choose to submit it.
+
