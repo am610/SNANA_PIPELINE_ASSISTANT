@@ -49,6 +49,19 @@ graph TD
 
 ---
 
+## Container (no clone, no build)
+
+```bash
+docker pull ghcr.io/am610/snana-pipeline-assistant:latest
+docker run --rm --env-file .env ghcr.io/am610/snana-pipeline-assistant \
+  diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
+```
+
+On HPC systems without a Docker daemon, Singularity/Apptainer can run the same
+image directly: `singularity run docker://ghcr.io/am610/snana-pipeline-assistant:latest diagnose "..."`.
+Built and pushed automatically on every change to `main` (see
+`.github/workflows/publish-image.yml`) — always current with this repo.
+
 ## Local Offline Mode
 
 DOE/HPC users wary of sending logs to external APIs can configure the tool to run entirely offline with a local model:

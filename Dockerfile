@@ -27,9 +27,14 @@ ENTRYPOINT ["snana-assistant"]
 
 # Instructions for running the container:
 #
-# 1. Local Docker:
+# 1. Pre-built image (published via .github/workflows/publish-image.yml on
+#    every push to main — no local build needed):
+#    docker pull ghcr.io/am610/snana-pipeline-assistant:latest
+#    docker run --rm --env-file .env ghcr.io/am610/snana-pipeline-assistant diagnose "..."
+#
+# 2. Build it yourself instead:
 #    docker build -t snana-assistant .
 #    docker run --rm -v $(pwd)/.env:/app/.env -v ~/.claude/snana-knowledge:/root/.claude/snana-knowledge snana-assistant diagnose "..."
 #
-# 2. HPC Singularity:
-#    singularity run docker://username/snana-assistant:latest diagnose "..."
+# 3. HPC Singularity/Apptainer (no Docker daemon needed):
+#    singularity run docker://ghcr.io/am610/snana-pipeline-assistant:latest diagnose "..."
