@@ -19,9 +19,11 @@ It is also, secondarily, intended as real infrastructure work worth pursuing
 grant funding for (NSF CSSI, Sloan Foundation — see `GRANTS.md`). Treat it as
 genuine cyberinfrastructure, not a toy.
 
-**Repo:** https://github.com/am610/SNANA_PIPELINE_ASSISTANT (currently **private** —
-if you're running outside the NERSC/Perlmutter filesystem this was built on, you'll
-need GitHub credentials with access to clone it).
+**Repo:** https://github.com/am610/SNANA_PIPELINE_ASSISTANT — **public** (corrected
+2026-08-21; this file previously said "private," which was stale). Verified via
+`gh repo view`; `.gitignore` and `GRANTS.md`'s own "shareable with collaborators"
+note were checked before confirming nothing sensitive is exposed. Clone with no
+special credentials needed.
 
 ## Where the fuller domain knowledge lives
 
