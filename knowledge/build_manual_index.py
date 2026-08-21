@@ -8,10 +8,18 @@ and outputs a JSON file that can be shipped as package data.
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
-MANUAL_PATH = Path("/global/homes/a/ayanmitr/SNANA/doc/snana_manual.tex")
+# Maintainer-only script (never run by end users — see Phase 1.8: the built
+# manual_chunks.json ships as package data). Not hardcoded to one person's path:
+# override with SNANA_MANUAL_TEX_PATH, or pass a path as argv[1].
+MANUAL_PATH = Path(
+    (len(__import__("sys").argv) > 1 and __import__("sys").argv[1])
+    or os.environ.get("SNANA_MANUAL_TEX_PATH")
+    or "/global/homes/a/ayanmitr/SNANA/doc/snana_manual.tex"
+)
 OUTPUT_PATH = Path(__file__).resolve().parent / "manual_chunks.json"
 
 def clean_latex(text: str) -> str:

@@ -957,7 +957,7 @@
   fix: Apply the same harsh selection cuts from Lochner 2022 Section 5 (4th paragraph)
     to the SNANA simulation configuration to directly compare with published forecasts
     and determine if cut severity explains the factor of ~80 discrepancy
-  scope: lsst
+  scope: universal
   status: unverified
   source: 'GitHub Issue #1579'
 - id: varnames-string-length-exceeded-match-cidlist
