@@ -25,6 +25,7 @@ class AnthropicBackend(Backend):
 
     def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6) -> str:
         messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
+        text_responses = []
         for _ in range(max_turns):
             response = self.client.messages.create(
                 model=self.model,
@@ -33,8 +34,12 @@ class AnthropicBackend(Backend):
                 tools=tool_schemas,
                 messages=messages,
             )
+            turn_text = "".join(b.text for b in response.content if b.type == "text").strip()
+            if turn_text:
+                text_responses.append(turn_text)
+
             if response.stop_reason != "tool_use":
-                return "".join(b.text for b in response.content if b.type == "text")
+                return "\n\n".join(text_responses)
 
             messages.append({"role": "assistant", "content": response.content})
             tool_results = []
@@ -44,7 +49,7 @@ class AnthropicBackend(Backend):
                 result = _call(dispatch, block.name, block.input)
                 tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": str(result)})
             messages.append({"role": "user", "content": tool_results})
-        return "Reached max_turns without a final answer."
+        return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
 
 
 def _call(dispatch: dict[str, Callable], name: str, kwargs: dict) -> str:

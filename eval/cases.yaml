@@ -79,3 +79,34 @@
     genSpec_SALT2 after the "Begin Generating Lightcurves" message.
   expected_entry: segfault-lightcurve-generation-uninitialized-mwxt-table
 
+- query: >
+    My simulation aborts after the message "Begin Generating Lightcurves."
+    with a stack smashing error and core dumped: "*** stack smashing detected ***: <unknown> terminated".
+  expected_entry: stack-smashing-sample-input-files
+
+- query: >
+    I'm running a bias correction for ATLAS and the job aborts in get_BININFO_biasCor_abg
+    saying SIM_alpha values exceeds bound of 2. I specified GENSIGMA_SALT2ALPHA: 0 0
+    but it still fails.
+  expected_entry: sim-alpha-beta-delta-function-numerical-artifact
+
+- query: >
+    My simulation aborted with interp_GALMAG_HOSTLIB error saying g-PSFSIG is outside valid range.
+  expected_entry: psfsig-outside-valid-range-abort
+
+- query: >
+    FATAL ERROR: CIDRAN_MAX exceeds MXCID_SIM limit of 299999999 in init_CIDRAN during a large simulation.
+  expected_entry: cidran-exceeds-sim-limit
+
+- query: >
+    Light curve fitting crashes with NROW exceeds bound MXSNLC in RDVERSION_FITS.
+  expected_entry: mxsnlc-fitting-limit-exceeded
+
+- query: >
+    GEN_SNHOST_DDLR aborts with invalid cosTH = -1.000000 for GALID entries.
+  expected_entry: host-ddlr-numerical-roundoff-costheta
+
+- query: >
+    Relative file paths like $SNANA_DEBUG do not resolve correctly with the new submission script.
+  expected_entry: relative-paths-submission-script
+

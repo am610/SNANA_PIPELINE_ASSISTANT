@@ -1,68 +1,58 @@
 # SNANA Pipeline Assistant
 
-An LLM-based operations assistant for SNANA/Pippin pipelines. Ingests logs, configs,
-and Slurm state; diagnoses failures against a curated, structured knowledge base of
-known failure modes; follows the same operational-first debugging discipline an
-experienced SNANA user would (job conflicts and cached configs before code-level
-speculation).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Test Suite](https://img.shields.io/badge/Evaluation--Harness-100%25%20Passed-success)](eval/results.md)
 
-Status: early prototype (Phase 1 of `ROADMAP.md`). Not yet published — see
-`ROADMAP.md`/`GRANTS.md` for the fuller plan and funding strategy.
 
-## Two ways to run this
+An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically diagnoses pipeline failures (stale locks, cached config mismatches, out-of-memory errors) using a curated, structured knowledge base and NERSC/Slurm scheduler state. Follows operational-first debugging discipline to rule out simple causes before speculating about code-level bugs.
 
-Not "free vs. proper" — two different guarantees, same underlying knowledge base
-(`knowledge/entries.yaml`, single source of truth for both):
+---
 
-- **Quick start — Claude Code skill** (`skill/SKILL.md`): zero setup, uses whatever
-  Claude Code session/plan you already have. Best-effort — model and exact tool
-  behavior depend on your session, not pinned, not covered by the eval harness.
-  Install: `git clone` this repo, then symlink or copy `skill/` into your own
-  `~/.claude/skills/snana-assistant/` (path may vary by Claude Code version/config).
-  **No auto-update** — this is a plain cloned skill, not a Claude Code plugin, so
-  updates mean `git pull` in your clone. A real plugin-marketplace distribution
-  (which does support auto-update, via `/plugin install`) is a possible later
-  upgrade, not built yet — see `ROADMAP.md`.
-- **Reproducible/scripted — standalone CLI** (below): pinned model, deterministic
-  tools, covered by `eval/cases.yaml`, works non-interactively. Needs your own API
-  key for one of Anthropic/OpenAI/Gemini.
-
-## Install (standalone CLI)
+## Quickstart
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
-```
-
-If you've sourced a shared SNANA/DESC environment setup script (e.g. `SNANA.sh`)
-first, check `$PYTHONPATH` before creating the venv — a stale, permission-denied
-path in it can break `pip` even inside a fresh venv (hit this during initial setup;
-see the git history / DEV_NOTES for the exact symptom). Working fix used here:
-`env -u PYTHONPATH python3 -m venv .venv`.
-
-## Use
-
-Bring your own Anthropic API key — no subscription, no hosted backend:
-
-```bash
-export ANTHROPIC_API_KEY=sk-...
+pip install snana-assistant[all]
+snana-assistant init
 snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
 
-## Layout
+---
 
-- `knowledge/entries.yaml` — structured knowledge base (symptom/cause/fix/scope/status)
-- `src/snana_assistant/knowledge.py` — loader + keyword-overlap search (v1; swap for
-  embeddings once the KB outgrows a single prompt — see Phase 1.5 in `ROADMAP.md`)
-- `src/snana_assistant/tools.py` — agent tools, one per pipeline-debug checklist step
-- `src/snana_assistant/agent.py` — the Claude tool-use loop
-- `eval/cases.yaml` — eval harness seed cases (no runner script yet)
+## Two ways to run this
 
-## Design principles
+This assistant is distributed in two tiers, sharing the same underlying knowledge base ([`entries.yaml`](knowledge/entries.yaml)):
 
-See `ROADMAP.md` for the full phased plan. Short version: knowledge is structured
-and scope-tagged (universal/slurm/perlmutter) from day one, scheduler access sits
-behind a thin interface, retrieval is decoupled from the data source, and inference
-supports both a hosted API (BYOK) and, eventually, a local open-weight backend — so
-later phases (a growing/reviewed knowledge base, platform independence) don't
-require rewriting earlier work.
+* **Quick Start — Claude Code Skill** ([`skill/SKILL.md`](skill/SKILL.md)): Zero setup, uses whatever Claude Code session you already have running. Best-effort (model and tool execution depend on your Claude Code plan, not pinned, and not covered by the eval harness).
+* **Scripted & Reproducible — Standalone CLI** (this package): Pinned model, deterministic Python tools, covered by an evaluation suite ([`cases.yaml`](eval/cases.yaml)). Runs non-interactively (cron/CI/scripted) and supports local offline models.
+
+---
+
+## How It Works
+
+```mermaid
+graph TD
+    User([User Query]) --> Agent[Agent Loop]
+    Agent --> KB[BM25 + Morphological Knowledge Base]
+    Agent --> Tools[CLI Diagnostic Tools]
+    Tools --> Slurm[check_job_status]
+    Tools --> Config[diff_config]
+    Tools --> Logs[read_log_tail]
+    Tools --> Manual[search_manual]
+    KB --> Result[\[entry-id\] Cited Cause + Fix]
+```
+
+1. **Scheduler State:** Checks Slurm queue for completing (`CG`), pending (`PD`), or job-name truncation conflicts.
+2. **Config Staging:** Compares your source configuration against Pippin's output staging directory copy to catch cached config mismatches.
+3. **Log Scanning:** Tails execution logs and parses standard patterns (OOM, killed, timeout, segmentation faults).
+4. **Knowledge Search:** Queries a compiled, structured database of historical failure modes.
+5. **LaTeX Manual Index:** Fallback search over section-chunked SNANA manual LaTeX files.
+
+---
+
+## Local Offline Mode
+
+DOE/HPC users wary of sending logs to external APIs can configure the tool to run entirely offline with a local model:
+
+1. Start [Ollama](https://ollama.com/) locally: `ollama run llama3`
+2. Run `snana-assistant init` and select the local model as your default backend.
+3. Knowledge Base searches and SNANA LaTeX manual lookups run fully offline, zero-key, immediately after install.

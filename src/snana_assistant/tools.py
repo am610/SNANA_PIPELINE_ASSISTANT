@@ -74,74 +74,92 @@ def read_log_tail(log_path: str, n_lines: int = 200) -> str:
     return header + "\n".join(tail[-80:])  # cap raw tail shown to keep context bounded
 
 
-def search_manual(query: str, manual_path: str | None = None, window: int = 15) -> str:
-    """Search the SNANA LaTeX manual for relevant sections or parameters."""
-    if not manual_path:
-        manual_path = os.environ.get("SNANA_MANUAL_PATH")
+DEFAULT_MANUAL_INDEX_PATH = Path(__file__).resolve().parent / "data" / "manual_chunks.json"
+if not DEFAULT_MANUAL_INDEX_PATH.exists():
+    DEFAULT_MANUAL_INDEX_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "manual_chunks.json"
+
+
+
+def search_manual(query: str, manual_index_path: str | None = None, top_k: int = 3) -> str:
+    """Search the pre-chunked SNANA manual index (Phase 1.6)."""
+    if not manual_index_path:
+        manual_index_path = os.environ.get("SNANA_MANUAL_INDEX_PATH") or str(DEFAULT_MANUAL_INDEX_PATH)
         
-    if not manual_path:
-        snana_dir = os.environ.get("SNANA_DIR")
-        if snana_dir:
-            manual_path = os.path.join(snana_dir, "doc", "snana_manual.tex")
-            
-    if not manual_path:
-        manual_path = "/global/homes/a/ayanmitr/SNANA/doc/snana_manual.tex"
-        
-    p = Path(manual_path)
+    p = Path(manual_index_path)
     if not p.exists():
-        return (
-            f"Manual file not found. Checked path: {manual_path}.\n"
-            "Please set SNANA_DIR or SNANA_MANUAL_PATH in your environment or .env file."
-        )
-        
+        return f"Manual index file not found at {manual_index_path}."
+
+    import json
+    import re
     try:
-        content = p.read_text(encoding="utf-8", errors="replace")
+        with open(p) as f:
+            chunks = json.load(f)
     except Exception as e:
-        return f"Error reading manual: {e}"
-        
-    lines = content.splitlines()
+        return f"Error reading manual index: {e}"
+
     query_lower = query.lower()
-    
-    # Find all line indices containing the query
-    matches = []
-    for idx, line in enumerate(lines):
-        if query_lower in line.lower():
-            matches.append(idx)
+    terms = set(re.findall(r"[a-z0-9_]+", query_lower))
+    stop_words = {"the", "a", "an", "is", "of", "to", "in", "but", "it", "and", "or", "for", "with", "as", "by", "at", "from", "on", "re", "be", "this", "that"}
+    terms = terms - stop_words
+    if not terms:
+        return "No search terms provided."
+
+    scored = []
+    for chunk in chunks:
+        # Score the text and titles
+        title_text = f"{chunk.get('section', '')} {chunk.get('subsection', '')} {chunk.get('subsubsection', '')}".lower()
+        chunk_text = chunk.get("text", "").lower()
+        
+        score = 0
+        title_words = set(re.findall(r"[a-z0-9_]+", title_text)) - stop_words
+        chunk_words = set(re.findall(r"[a-z0-9_]+", chunk_text)) - stop_words
+        
+        for t in terms:
+            # Match in titles (high weight)
+            if t in title_words:
+                score += 5
+            else:
+                for tw in title_words:
+                    if len(t) >= 4 and len(tw) >= 4 and t[:4] == tw[:4]:
+                        score += 3
+                        break
             
-    if not matches:
+            # Match in chunk text
+            if t in chunk_words:
+                score += 3
+            else:
+                for cw in chunk_words:
+                    if len(t) >= 4 and len(cw) >= 4 and t[:4] == cw[:4]:
+                        score += 2
+                        break
+                    if len(t) >= 3 and len(cw) >= 3 and (t in cw or cw in t):
+                        score += 1
+                        break
+        
+        if score > 0:
+            scored.append((score, chunk))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    if not scored:
         return f"No occurrences of '{query}' found in the SNANA manual."
+
+    results = []
+    for score, chunk in scored[:top_k]:
+        header_parts = []
+        if chunk.get("section"):
+            header_parts.append(chunk["section"])
+        if chunk.get("subsection"):
+            header_parts.append(chunk["subsection"])
+        if chunk.get("subsubsection"):
+            header_parts.append(chunk["subsubsection"])
+        header = " > ".join(header_parts)
         
-    # Group match indices that are close to each other
-    groups = []
-    current_group = []
-    for idx in matches:
-        if not current_group or idx - current_group[-1] < window:
-            current_group.append(idx)
-        else:
-            groups.append(current_group)
-            current_group = [idx]
-    if current_group:
-        groups.append(current_group)
-        
-    # For each group, extract context window
-    chunks = []
-    # Cap at top 4 groups to keep prompt context clean
-    for g in groups[:4]:
-        start = max(0, g[0] - window)
-        end = min(len(lines), g[-1] + window + 1)
-        chunk_lines = []
-        for i in range(start, end):
-            # Highlight matching lines with a prefix
-            prefix = "MATCH >>> " if i in g else "          "
-            chunk_lines.append(f"{prefix}{i+1}: {lines[i]}")
-        chunks.append(f"--- Context (lines {start+1} to {end}) ---\n" + "\n".join(chunk_lines))
-        
-    result = f"Found {len(matches)} matches in {len(groups)} distinct sections of the manual.\n\n"
-    result += "\n\n".join(chunks)
+        results.append(
+            f"=== Section: {header} (lines {chunk['start_line']}-{chunk['end_line']}, Score: {score}) ===\n"
+            f"{chunk['text']}\n"
+        )
     
-    if len(result) > 15000:
-        result = result[:15000] + "\n... [TRUNCATED] ..."
-    return result
+    return f"Found {len(scored)} relevant sections in the manual. Showing top {top_k}:\n\n" + "\n\n".join(results)
 
 
 def search_knowledge(query: str, kb: KnowledgeBase) -> str:

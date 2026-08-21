@@ -44,20 +44,25 @@ class OpenAIBackend(Backend):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ]
+        text_responses = []
         for _ in range(max_turns):
             response = self.client.chat.completions.create(
                 model=self.model, messages=messages, tools=tools,
             )
             msg = response.choices[0].message
+            turn_text = (msg.content or "").strip()
+            if turn_text:
+                text_responses.append(turn_text)
+
             if not msg.tool_calls:
-                return msg.content or ""
+                return "\n\n".join(text_responses)
 
             messages.append(msg.model_dump(exclude_unset=True))
             for tc in msg.tool_calls:
                 kwargs = json.loads(tc.function.arguments or "{}")
                 result = _call(dispatch, tc.function.name, kwargs)
                 messages.append({"role": "tool", "tool_call_id": tc.id, "content": str(result)})
-        return "Reached max_turns without a final answer."
+        return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
 
 
 def _call(dispatch: dict[str, Callable], name: str, kwargs: dict) -> str:

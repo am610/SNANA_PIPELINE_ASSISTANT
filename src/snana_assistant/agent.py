@@ -28,14 +28,18 @@ def _load_env() -> None:
                 if "=" in line:
                     k, v = line.split("=", 1)
                     os.environ[k.strip()] = v.strip()
+    # Load global config settings as well
+    from .config import load_all_config_to_env
+    load_all_config_to_env()
 
 
 _load_env()
 
 
+
 SYSTEM_PROMPT = """You are a SNANA/Pippin pipeline debugging assistant.
 
-Always call search_knowledge on the very first turn with the user's symptom/query text to check for matching curated failure modes. 
+Always call search_knowledge on the very first turn with the user's exact symptom/query text (verbatim, do not paraphrase, rewrite, or summarize) to check for matching curated failure modes. 
 
 CRITICAL: If a curated failure mode matches the user's query, you MUST explicitly include its entry ID in square brackets (e.g., [stale-cached-yaml] or [sigint-abort-bbc]) in your final response to the user, and explain its cause and fix. Do not explain the fix without citing the exact entry ID.
 

@@ -15,7 +15,10 @@ from pathlib import Path
 
 import yaml
 
-DEFAULT_KNOWLEDGE_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "entries.yaml"
+DEFAULT_KNOWLEDGE_PATH = Path(__file__).resolve().parent / "data" / "entries.yaml"
+if not DEFAULT_KNOWLEDGE_PATH.exists():
+    DEFAULT_KNOWLEDGE_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "entries.yaml"
+
 
 
 @dataclass
@@ -49,18 +52,89 @@ class KnowledgeBase:
         return cls(entries=[Entry(**e) for e in raw])
 
     def search(self, query: str, scopes: tuple[str, ...] = ("universal", "slurm", "perlmutter"), top_k: int = 5) -> list[Entry]:
-        """Keyword-overlap ranking. Replace with embeddings when the KB outgrows a single prompt."""
-        terms = set(re.findall(r"[a-z0-9_]+", query.lower()))
-        scored = []
-        for e in self.entries:
-            if e.scope not in scopes:
-                continue
-            haystack = f"{e.symptom} {e.cause} {e.fix} {e.id}".lower()
-            score = sum(1 for t in terms if t in haystack)
-            if score > 0:
-                scored.append((score, e))
-        scored.sort(key=lambda pair: pair[0], reverse=True)
-        return [e for _, e in scored[:top_k]] or self.entries[:top_k]  # fall back to showing something
+        """Lexical search using BM25 ranking (pure Python, Phase 1.7)."""
+        import math
+        from collections import Counter
+
+        query_terms = re.findall(r"[a-z0-9_]+", query.lower())
+        stop_words = {"the", "a", "an", "is", "of", "to", "in", "but", "it", "and", "or", "for", "with", "as", "by", "at", "from", "on", "re", "be", "this", "that"}
+        query_terms = [t for t in query_terms if t not in stop_words]
+        if not query_terms:
+            return []
+
+        # Filter entries by scope first
+        filtered_entries = [e for e in self.entries if e.scope in scopes]
+        if not filtered_entries:
+            return []
+
+        # Tokenize each entry's haystack
+        corpus = []
+        entry_haystacks = []
+        for e in filtered_entries:
+            haystack = f"{e.symptom} {e.cause} {e.fix} {e.id} {e.source}".lower()
+            words = [w for w in re.findall(r"[a-z0-9_]+", haystack) if w not in stop_words]
+            corpus.append(words)
+            entry_haystacks.append(words)
+
+        # Build BM25 index on the fly
+        corpus_size = len(corpus)
+        avg_doc_len = sum(len(doc) for doc in corpus) / corpus_size if corpus_size > 0 else 1.0
+        doc_lens = [len(doc) for doc in corpus]
+        
+        # Compute doc frequencies
+        doc_freqs = Counter()
+        for doc in corpus:
+            for word in set(doc):
+                doc_freqs[word] += 1
+                
+        # Compute IDFs
+        idfs = {}
+        for word, freq in doc_freqs.items():
+            idfs[word] = math.log((corpus_size - freq + 0.5) / (freq + 0.5) + 1.0)
+
+        # Score each document
+        k1 = 1.5
+        b = 0.75
+        scored_entries = []
+        
+        for idx, entry in enumerate(filtered_entries):
+            doc_words = entry_haystacks[idx]
+            doc_len = doc_lens[idx]
+            word_counts = Counter(doc_words)
+            score = 0.0
+            
+            for q in query_terms:
+                freq = word_counts.get(q, 0.0)
+                
+                # Suffix/prefix/substring matching fallback if no exact word match
+                if freq == 0.0:
+                    for word, count in word_counts.items():
+                        min_len = min(len(q), len(word))
+                        if min_len >= 4:
+                            prefix_len = 0
+                            while prefix_len < min_len and q[prefix_len] == word[prefix_len]:
+                                prefix_len += 1
+                            if prefix_len >= 4:
+                                freq += 0.5 * count
+                                break
+                        if len(q) >= 3 and len(word) >= 3 and (q in word or word in q):
+                            freq += 0.25 * count
+                            break
+                            
+                if freq == 0.0:
+                    continue
+                    
+                # IDF calculation
+                idf = idfs.get(q, math.log(corpus_size + 1.0))
+                numerator = freq * (k1 + 1.0)
+                denominator = freq + k1 * (1.0 - b + b * (doc_len / avg_doc_len))
+                score += idf * (numerator / denominator)
+                
+            if score > 0.0:
+                scored_entries.append((score, entry))
+
+        scored_entries.sort(key=lambda pair: pair[0], reverse=True)
+        return [e for _, e in scored_entries[:top_k]]
 
     def all_as_context(self, scopes: tuple[str, ...] = ("universal", "slurm", "perlmutter")) -> str:
         blocks = [e.as_context_block() for e in self.entries if e.scope in scopes]

@@ -39,3 +39,24 @@ For example:
 snana-assistant promote hostlib-nbrlist-crazy-sep
 ```
 This updates the status directly inside the underlying knowledge database.
+
+---
+
+## 3. Local Offline Backends (Ollama)
+
+If you are working on secure compute nodes or don't want to use hosted APIs, you can run the diagnostic agent entirely offline:
+
+1. **Start Ollama** locally or on your login node:
+   ```bash
+   ollama run llama3
+   ```
+2. **Bind the local server** by running the config wizard:
+   ```bash
+   snana-assistant init
+   ```
+   Confirm configuring local Ollama as your default backend.
+3. **Diagnose failures locally:**
+   ```bash
+   snana-assistant diagnose "My light-curve simulation crashed"
+   ```
+

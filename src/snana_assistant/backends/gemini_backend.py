@@ -47,6 +47,7 @@ class GeminiBackend(Backend):
         contents: list[types.Content] = [
             types.Content(role="user", parts=[types.Part(text=user_message)])
         ]
+        text_responses = []
         for _ in range(max_turns):
             retries = 5
             backoff = 15
@@ -66,9 +67,13 @@ class GeminiBackend(Backend):
                     else:
                         raise
             candidate = response.candidates[0]
+            turn_text = "".join(p.text or "" for p in candidate.content.parts if p.text).strip()
+            if turn_text:
+                text_responses.append(turn_text)
+
             function_calls = [p.function_call for p in candidate.content.parts if p.function_call]
             if not function_calls:
-                return "".join(p.text or "" for p in candidate.content.parts)
+                return "\n\n".join(text_responses)
 
             contents.append(candidate.content)
             response_parts = []
@@ -78,7 +83,7 @@ class GeminiBackend(Backend):
                     types.Part.from_function_response(name=fc.name, response={"result": str(result)})
                 )
             contents.append(types.Content(role="user", parts=response_parts))
-        return "Reached max_turns without a final answer."
+        return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
 
 
 def _call(dispatch: dict[str, Callable], name: str, kwargs: dict) -> str:

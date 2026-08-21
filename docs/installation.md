@@ -10,17 +10,20 @@ To install the package with all provider backends (Anthropic, OpenAI, Gemini):
 pip install "snana-assistant[all] @ git+https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git"
 ```
 
-### Environment Setup
-Create a `.env` file in your workspace directory (or home folder) containing your API keys:
+### Initial Configuration
 
-```env
-ANTHROPIC_API_KEY=your-api-key
-# Optional custom paths:
-# SNANA_DIR=/path/to/snana
-# SNANA_GOTCHAS_DIR=/path/to/gotchas
+After installation, run the configuration wizard:
+```bash
+snana-assistant init
 ```
+This wizard:
+* Automatically probes environment variables (`$SNDATA_ROOT`, `$SNANA_DIR`) and defaults.
+* Automatically configures setup commands (like `source setup_td.sh` on Perlmutter).
+* Detects running local Ollama servers and configured models.
+* Stores persistent settings in `~/.config/snana-assistant/config.yaml` so you don't have to define path environment variables again.
 
 ---
+
 
 ## 2. Running via Docker
 
