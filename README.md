@@ -7,6 +7,8 @@
 
 An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically diagnoses pipeline failures (stale locks, cached config mismatches, out-of-memory errors) using a curated, structured knowledge base and NERSC/Slurm scheduler state. Follows operational-first debugging discipline to rule out simple causes before speculating about code-level bugs.
 
+![demo: snana-assistant diagnose finding a cited, verified failure mode](assets/demo.gif)
+
 ---
 
 ## Quickstart
