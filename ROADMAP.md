@@ -392,7 +392,26 @@ for now. Worth revisiting as a plugin if this gets real outside adoption.
   Ayan adds the secret. **The only remaining step is still Ayan's:
   `gh secret set ANTHROPIC_API_KEY`, run locally so the key never appears in a
   chat transcript.** Once that's done, no further code changes are needed — the
-  weekly cron (Mondays 13:00 UTC) and manual dispatch are both already live.
+  weekly cron and manual dispatch are both already live.
+- 2026-08-21 (session 10, Claude Code) — Built Phase 6 (personal job-setup mode) per
+  Ayan's request: "learn from my Pippin inputs... be ready to set up a job." Flagged
+  and got explicit sign-off on the two real decisions first — capability tier
+  (generate + write to a new directory only, no job submission) and mandatory
+  self-check against the KB before writing. Built `templates.py` (local-only index,
+  verified zero leakage into this repo), `search_templates`/`write_project_files`
+  tools on a separate `SETUP_TOOL_SCHEMAS`/dispatch, `Agent.setup_job()` with a
+  dedicated system prompt, and `index-project`/`setup` CLI commands. Found and fixed
+  a real bug live: `AnthropicBackend`'s hardcoded `max_tokens=1024` silently starved
+  the first real test before it ever called the write tool — added `max_tokens`
+  across the `Backend` interface and all three implementations. Verified end-to-end
+  for real against an actual project (94 real config files indexed from
+  PIPPIN_EUCLID_DDF, one real `setup` request produced a structurally sound Pippin
+  YAML that correctly applied a known gotcha). Also noticed and fixed a second
+  independent rebuild of `weekly-ingest.yml` (Antigravity, different session) that
+  had dropped the `permissions:` block — confirmed via the GitHub API that this
+  repo's default `GITHUB_TOKEN` permission is read-only, so the missing block would
+  have 403'd the create-pull-request step the first time it actually needed to run.
+  Re-ran eval/cases.yaml after all backend changes: still 100% (20/20).
 
 
 
