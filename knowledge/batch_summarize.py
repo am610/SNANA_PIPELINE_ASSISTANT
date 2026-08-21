@@ -55,6 +55,40 @@ def clean_yaml_response(response: str) -> str:
         response = "\n".join(lines).strip()
     return response
 
+
+def summarize_issue(issue: dict, agent: "Agent") -> list[dict] | None:
+    """Calls the LLM to turn one GitHub issue (with body + comments) into
+    entries.yaml-schema entry dict(s). Returns None if the response isn't
+    parseable YAML. Factored out so sync_new_issues.py (Phase 2(a)) reuses
+    this instead of duplicating the prompt/parsing logic."""
+    comments_str = ""
+    for idx, comment in enumerate(issue.get("comments", []), 1):
+        comments_str += f"\n--- Comment {idx} by {comment['author']} ---\n{comment['body']}\n"
+
+    prompt = SUMMARIZE_PROMPT_TEMPLATE.format(
+        number=issue["number"],
+        title=issue["title"],
+        body=issue["body"],
+        comments_str=comments_str,
+    )
+
+    system_prompt = "You are a precise technical summarizer. Output only valid YAML."
+    response = agent.backend.diagnose(
+        system_prompt=system_prompt, user_message=prompt, tool_schemas=[], dispatch={}
+    )
+    cleaned = clean_yaml_response(response)
+
+    try:
+        parsed = yaml.safe_load(cleaned)
+    except Exception:
+        return None
+
+    if isinstance(parsed, dict):
+        parsed = [parsed]
+    if not isinstance(parsed, list):
+        return None
+    return parsed
+
 def main():
     parser = argparse.ArgumentParser(description="Batch summarize candidate issues into entries.yaml")
     parser.add_argument("numbers", type=int, nargs="+", help="The GitHub issue numbers to summarize.")
@@ -117,72 +151,46 @@ def main():
             continue
 
         print(f"Found Issue #{issue['number']}: {issue['title']}")
-        
-        comments_str = ""
-        for c_idx, comment in enumerate(issue["comments"], 1):
-            comments_str += f"\n--- Comment {c_idx} by {comment['author']} ---\n{comment['body']}\n"
-
-        prompt = SUMMARIZE_PROMPT_TEMPLATE.format(
-            number=issue["number"],
-            title=issue["title"],
-            body=issue["body"],
-            comments_str=comments_str
-        )
-
         print("Calling LLM...")
-        try:
-            system_prompt = "You are a precise technical summarizer. Output only valid YAML."
-            response = agent.backend.diagnose(
-                system_prompt=system_prompt,
-                user_message=prompt,
-                tool_schemas=[],
-                dispatch={}
-            )
 
-            cleaned_response = clean_yaml_response(response)
-            
-            # Validate if it parses as YAML
-            try:
-                parsed = yaml.safe_load(cleaned_response)
-                if not isinstance(parsed, list):
-                    if isinstance(parsed, dict):
-                        parsed = [parsed]
-                    else:
-                        raise ValueError("YAML root is not a list or dictionary.")
-                
-                # Verify fields
-                required_fields = ["id", "symptom", "cause", "fix", "scope", "status", "source"]
-                for entry in parsed:
-                    for field in required_fields:
-                        if field not in entry:
-                            print(f"Warning: Entry is missing field '{field}'")
-                
-                # Append to entries.yaml
-                with open(ENTRIES_PATH, "r") as f_in:
-                    current_entries = yaml.safe_load(f_in) or []
-                
-                existing_ids = {e.get("id") for e in current_entries}
-                new_entries_to_add = [e for e in parsed if e.get("id") not in existing_ids]
-                
-                if new_entries_to_add:
-                    current_entries.extend(new_entries_to_add)
-                    with open(ENTRIES_PATH, "w") as f_out:
-                        yaml.safe_dump(current_entries, f_out, sort_keys=False, default_flow_style=False)
-                    print(f"Successfully added {len(new_entries_to_add)} entry/entries from Issue #{num}!")
-                    successful += 1
-                else:
-                    print(f"No new unique entries added from Issue #{num} (ID may already exist).")
-                    successful += 1
-                    
-            except Exception as e:
-                print(f"Error parsing YAML response for Issue #{num}: {e}", file=sys.stderr)
-                print(f"Raw response: {response}", file=sys.stderr)
-                failed += 1
-                
+        try:
+            parsed = summarize_issue(issue, agent)
         except Exception as exc:
             print(f"Error calling LLM for Issue #{num}: {exc}", file=sys.stderr)
             failed += 1
-            
+            print("-" * 60)
+            continue
+
+        if parsed is None:
+            print(f"Error: LLM response for Issue #{num} was not parseable YAML.", file=sys.stderr)
+            failed += 1
+            print("-" * 60)
+            continue
+
+        # Verify fields
+        required_fields = ["id", "symptom", "cause", "fix", "scope", "status", "source"]
+        for entry in parsed:
+            for field in required_fields:
+                if field not in entry:
+                    print(f"Warning: Entry is missing field '{field}'")
+
+        # Append to entries.yaml
+        with open(ENTRIES_PATH, "r") as f_in:
+            current_entries = yaml.safe_load(f_in) or []
+
+        existing_ids = {e.get("id") for e in current_entries}
+        new_entries_to_add = [e for e in parsed if e.get("id") not in existing_ids]
+
+        if new_entries_to_add:
+            current_entries.extend(new_entries_to_add)
+            with open(ENTRIES_PATH, "w") as f_out:
+                yaml.safe_dump(current_entries, f_out, sort_keys=False, default_flow_style=False)
+            print(f"Successfully added {len(new_entries_to_add)} entry/entries from Issue #{num}!")
+            successful += 1
+        else:
+            print(f"No new unique entries added from Issue #{num} (ID may already exist).")
+            successful += 1
+
         print("-" * 60)
 
     print("\nBatch Ingestion Complete!")

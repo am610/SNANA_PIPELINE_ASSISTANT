@@ -2005,3 +2005,13 @@
   scope: universal
   status: unverified
   source: 'GitHub Issue #172'
+- id: bbc-salt2mu-missing-zbin-specification
+  symptom: BBC/SALT2mu bias correction uses default redshift binning that is too coarse
+    for low-z samples, potentially producing biased results without user awareness
+  cause: Default redshift binsize in BBC bias correction is inappropriate for typical
+    low-z surveys and fields, leading to insufficient binning granularity
+  fix: Require explicit BCOR-zbin specifications for each SURVEY and/or FIELD; abort
+    if any are missing
+  scope: universal
+  status: unverified
+  source: 'GitHub Issue #1689'

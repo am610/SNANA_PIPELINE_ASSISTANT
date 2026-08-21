@@ -16,9 +16,28 @@ RAW_ISSUES_PATH = Path(__file__).resolve().parent / "raw_closed_issues.json"
 CANDIDATE_ISSUES_PATH = Path(__file__).resolve().parent / "candidate_issues.json"
 
 FAILURE_KEYWORDS = [
-    "error", "abort", "fail", "crash", "segfault", "compile", "wrong", 
+    "error", "abort", "fail", "crash", "segfault", "compile", "wrong",
     "unable to", "cannot", "invalid", "missing", "collision", "segmentation fault"
 ]
+
+
+def is_high_signal(issue: dict) -> bool:
+    """Same heuristic used to build candidate_issues.json from the initial
+    1,294-issue dump — factored out so sync_new_issues.py (Phase 2(a)) reuses
+    it instead of re-implementing the filter."""
+    title = issue.get("title", "")
+    body = issue.get("body", "") or ""
+    comments = issue.get("comments") or []
+
+    all_text = f"{title}\n{body}\n" + "\n".join(c.get("body", "") or "" for c in comments)
+    all_text_lower = all_text.lower()
+
+    has_keyword = any(k in all_text_lower for k in FAILURE_KEYWORDS)
+    has_resolution_discussion = len(comments) >= 1
+    has_sufficient_text = len(body.strip()) > 20 or any(len(c.get("body", "").strip()) > 30 for c in comments)
+
+    return has_keyword and has_resolution_discussion and has_sufficient_text
+
 
 def main() -> None:
     if not RAW_ISSUES_PATH.exists():
@@ -32,30 +51,12 @@ def main() -> None:
 
     candidates = []
     for issue in issues:
-        number = issue.get("number")
-        title = issue.get("title", "")
-        body = issue.get("body", "") or ""
-        comments = issue.get("comments") or []
-        
-        # Combine all text content to scan for symptoms
-        all_text = f"{title}\n{body}\n" + "\n".join(c.get("body", "") or "" for c in comments)
-        all_text_lower = all_text.lower()
-        
-        # Heuristics:
-        # 1. Must contain at least one failure keyword
-        has_keyword = any(k in all_text_lower for k in FAILURE_KEYWORDS)
-        
-        # 2. Must have some discussion (at least 1 comment) to ensure there was a resolution discussed
-        has_resolution_discussion = len(comments) >= 1
-        
-        # 3. Exclude simple trivial descriptions (e.g. less than 20 chars)
-        has_sufficient_text = len(body.strip()) > 20 or any(len(c.get("body", "").strip()) > 30 for c in comments)
-
-        if has_keyword and has_resolution_discussion and has_sufficient_text:
+        if is_high_signal(issue):
+            comments = issue.get("comments") or []
             candidates.append({
-                "number": number,
-                "title": title,
-                "body": body,
+                "number": issue.get("number"),
+                "title": issue.get("title", ""),
+                "body": issue.get("body", "") or "",
                 "comments_count": len(comments),
                 "comments": [
                     {
