@@ -91,6 +91,32 @@ This assistant is distributed in two tiers, sharing the same underlying knowledg
 
 ---
 
+## Asking about config files, not just failures
+
+Besides diagnosing crashes, `diagnose` will read and review a config/input file you point it
+at — what it does, what it depends on, and whether any keys look wrong:
+
+```bash
+snana-assistant diagnose "check sim_ia_salt_des5yr.input -- is it written correctly, \
+  what dependency files does it call, and what is it supposed to do?"
+```
+
+These reviews cost more agent turns than a failure lookup, because the assistant searches the
+knowledge base, gotchas, and manual before it opens the file, then follows any
+`INPUT_FILE_INCLUDE` chain. If an answer ever comes back tagged
+
+```
+[incomplete: stopped after 15 tool-use turns without reaching a final answer -- rerun with a higher --max-turns]
+```
+
+rerun with a bigger budget:
+
+```bash
+snana-assistant diagnose "..." --max-turns 25 --max-tokens 8192
+```
+
+---
+
 ## How It Works
 
 ```mermaid
