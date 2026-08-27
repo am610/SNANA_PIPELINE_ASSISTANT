@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-08-27
+
+### Changed
+- **Prompt caching on the Anthropic backend -- ~48% off the input-token bill.** Every
+  turn resent the entire conversation: the system prompt, ~2.7k tokens of byte-identical
+  tool schemas, and every prior tool result. Measured on a 3-turn query, input tokens
+  outnumbered output 24:1, so input dominated cost. One cache breakpoint on the system
+  block (the prefix is ordered tools -> system -> messages, so it covers the schemas too)
+  plus a rolling breakpoint at the end of the conversation.
+
+  Measured A/B on the same query: billed input-token equivalents 10,825 -> 5,570
+  (**-48.5%**), wall time 8.8s -> 8.2s (-6.5%). Savings are larger in `chat`, where
+  history compounds every turn.
+
+  Caveat: cache entries expire after ~5 minutes. Back-to-back turns within a `diagnose`
+  run or an active `chat` session hit warm; an occasional one-shot run pays the 1.25x
+  write surcharge and never reads it back, making that query marginally more expensive.
+  Clear win for multi-turn use, roughly neutral for infrequent single queries.
+
+  Set `SNANA_ASSISTANT_NO_CACHE=1` to disable. OpenAI caches automatically with no code
+  change; Gemini explicit caching is a separate API and is not wired up.
+
 ## [0.3.0] - 2026-08-27
 
 ### Added

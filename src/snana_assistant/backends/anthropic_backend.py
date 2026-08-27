@@ -11,6 +11,49 @@ except ImportError:
     anthropic = None
 
 
+_EPHEMERAL = {"type": "ephemeral"}
+
+
+def _cacheable_system(system_prompt: str):
+    """System prompt as a cacheable block.
+
+    The cache prefix is ordered tools -> system -> messages, so one breakpoint here
+    covers both the tool schemas (~2.7k tokens, byte-identical every turn) and the
+    system prompt. Without it every turn re-uploads and re-processes all of it.
+    """
+    return [{"type": "text", "text": system_prompt, "cache_control": _EPHEMERAL}]
+
+
+def _mark_conversation_cache(messages: list) -> None:
+    """Move the rolling cache breakpoint to the end of the conversation so far.
+
+    Each turn resends the whole history, so without this the growing prefix -- prior
+    tool results, file contents, manual chunks -- is reprocessed from scratch every
+    time. Old marks are stripped first: the API caps the number of breakpoints, and
+    marking every turn would blow past it.
+
+    Only plain dict blocks are marked. Assistant turns hold SDK block objects, which
+    do not take a cache_control key; they still get cached as part of the prefix
+    covered by a later breakpoint.
+    """
+    for m in messages:
+        content = m.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    block.pop("cache_control", None)
+
+    if not messages:
+        return
+    content = messages[-1].get("content")
+    if isinstance(content, str):
+        messages[-1]["content"] = [
+            {"type": "text", "text": content, "cache_control": _EPHEMERAL}
+        ]
+    elif isinstance(content, list) and content and isinstance(content[-1], dict):
+        content[-1]["cache_control"] = _EPHEMERAL
+
+
 class AnthropicBackend(Backend):
     """Native Anthropic tool-use format — TOOL_SCHEMAS is already shaped this way."""
 
@@ -27,11 +70,14 @@ class AnthropicBackend(Backend):
         messages: list[dict[str, Any]] = history if history is not None else []
         messages.append({"role": "user", "content": user_message})
         text_responses = []
+        use_cache = os.environ.get("SNANA_ASSISTANT_NO_CACHE", "").lower() not in ("1", "true", "yes")
         for _ in range(max_turns):
+            if use_cache:
+                _mark_conversation_cache(messages)
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=max_tokens,
-                system=system_prompt,
+                system=_cacheable_system(system_prompt) if use_cache else system_prompt,
                 tools=tool_schemas,
                 messages=messages,
             )
