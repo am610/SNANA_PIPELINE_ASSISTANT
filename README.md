@@ -18,6 +18,10 @@ An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically di
 pip install --upgrade pip  # Ensure pip is up-to-date
 pip install snana-assistant[all]
 snana-assistant init
+
+# Set your API key (supports ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY)
+export ANTHROPIC_API_KEY="your-api-key"
+
 snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
 
@@ -54,6 +58,10 @@ pip install -e .[all]
 #### Then, configure and run:
 ```bash
 snana-assistant init
+
+# Set your API key (supports ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY)
+export ANTHROPIC_API_KEY="your-api-key"
+
 snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
 
