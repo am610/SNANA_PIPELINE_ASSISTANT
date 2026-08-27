@@ -39,6 +39,15 @@ def main() -> None:
         "--provider", choices=["anthropic", "openai", "gemini", "local", "ollama"], default=None,
         help="Force a specific backend instead of auto-detecting from which API key is set.",
     )
+    diagnose_p.add_argument(
+        "--max-turns", type=int, default=15,
+        help="Tool-use turns the agent may take before giving up (default: 15). Raise for "
+             "queries that read long include chains.",
+    )
+    diagnose_p.add_argument(
+        "--max-tokens", type=int, default=4096,
+        help="Token cap per model response (default: 4096).",
+    )
 
     promote_p = sub.add_parser("promote", help="Promote a knowledge base entry from unverified to verified.")
     promote_p.add_argument("entry_id", help="The ID of the entry to promote (e.g. 'hostlib-nbrlist-crazy-sep').")
@@ -74,7 +83,7 @@ def main() -> None:
         except RuntimeError as exc:
             print(str(exc), file=sys.stderr)
             sys.exit(1)
-        print(agent.diagnose(args.description))
+        print(agent.diagnose(args.description, max_turns=args.max_turns, max_tokens=args.max_tokens))
     elif args.command == "promote":
         from .knowledge import KnowledgeBase
         kb = KnowledgeBase.load()

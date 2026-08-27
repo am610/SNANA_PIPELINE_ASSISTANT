@@ -54,8 +54,17 @@ def run_eval(cases_path: Path, provider: str | None = None, verbose: bool = Fals
             print(f"Waiting {delay} seconds to respect API rate limits...")
             time.sleep(delay)
         query = case["query"].strip()
-        expected = case["expected_entry"].strip()
-        print(f"Case {idx}/{total}: expected={expected}")
+        # A case asserts either a curated-entry citation (expected_entry) or, for
+        # non-diagnostic queries with no KB entry to cite, a set of substrings the
+        # answer must contain (expect_contains). Every case additionally fails if the
+        # agent loop ran out of turns -- see backends.base.truncated.
+        expected = (case.get("expected_entry") or "").strip()
+        expect_contains = [s.strip() for s in case.get("expect_contains", [])]
+        if not expected and not expect_contains:
+            print(f"Case {idx}/{total}: SKIPPED (no assertion)")
+            continue
+        label = expected or f"contains {expect_contains!r}"
+        print(f"Case {idx}/{total}: expected={label}")
         if verbose:
             print(f"Query: {query}")
         
@@ -65,8 +74,10 @@ def run_eval(cases_path: Path, provider: str | None = None, verbose: bool = Fals
             case_elapsed = time.time() - case_start
             
             # Simple substring check (expected ID cited in response)
-            is_success = expected in response
-            
+            is_success = (expected in response) if expected else all(s in response for s in expect_contains)
+            if "[incomplete:" in response:
+                is_success = False
+
             if is_success:
                 passed += 1
                 status_str = "PASSED"
@@ -82,7 +93,7 @@ def run_eval(cases_path: Path, provider: str | None = None, verbose: bool = Fals
                 
             results.append({
                 "index": idx,
-                "expected": expected,
+                "expected": label,
                 "success": is_success,
                 "elapsed_seconds": case_elapsed,
                 "response": response
@@ -92,7 +103,7 @@ def run_eval(cases_path: Path, provider: str | None = None, verbose: bool = Fals
             print(f"  Result: ERROR - {exc} (took {case_elapsed:.2f}s)")
             results.append({
                 "index": idx,
-                "expected": expected,
+                "expected": label,
                 "success": False,
                 "error": str(exc),
                 "elapsed_seconds": case_elapsed,

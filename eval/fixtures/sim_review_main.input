@@ -1,0 +1,12 @@
+# Eval fixture: a minimal SNANA sim input with an INPUT_FILE_INCLUDE chain.
+# Exercises the file-review query shape (read_file -> follow include -> report),
+# which is what exhausted the old 6-turn agent loop. Not a runnable science config.
+
+GENVERSION: EVAL_FIXTURE_REVIEW
+GENSOURCE:  RANDOM
+GENMODEL:   $SNDATA_ROOT/models/SALT3/SALT3.DES5YR
+GENTYPE:    1
+
+NGENTOT_LC: 100
+
+INPUT_FILE_INCLUDE: $PWD/sim_review_survey.input

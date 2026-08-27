@@ -1,0 +1,11 @@
+# Eval fixture: the included survey file for sim_review_main.input.
+# FORMAT_MASS below is a DELIBERATE typo for FORMAT_MASK -- the eval case asserts
+# the assistant reaches this file through the include and reports the bad key.
+
+SIMLIB_FILE: DES-SN5YR_DES.SIMLIB
+HOSTLIB_FILE: DES-SN5YR_DES.HOSTLIB
+KCOR_FILE: calib_DES-SN5YR_DES.fits.gz
+
+FORMAT_MASS: 2
+
+GENFILTERS: griz

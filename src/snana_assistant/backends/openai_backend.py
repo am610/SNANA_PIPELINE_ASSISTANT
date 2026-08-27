@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any, Callable
 
-from .base import Backend
+from .base import Backend, truncated as _truncated
 
 try:
     from openai import OpenAI
@@ -38,7 +38,7 @@ class OpenAIBackend(Backend):
         self.client = OpenAI(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6, max_tokens=1024) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096) -> str:
         tools = _to_openai_tools(tool_schemas)
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system_prompt},
@@ -62,7 +62,7 @@ class OpenAIBackend(Backend):
                 kwargs = json.loads(tc.function.arguments or "{}")
                 result = _call(dispatch, tc.function.name, kwargs)
                 messages.append({"role": "tool", "tool_call_id": tc.id, "content": str(result)})
-        return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
+        return _truncated(text_responses, max_turns)
 
 
 def _call(dispatch: dict[str, Callable], name: str, kwargs: dict) -> str:

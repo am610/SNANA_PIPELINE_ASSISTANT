@@ -13,11 +13,36 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable
 
 
+def truncated(text_responses: list[str], max_turns: int) -> str:
+    """Terminal return for a loop that ran out of turns mid-investigation.
+
+    Always marks the result, even when some text was emitted. The previous
+    `"\\n\\n".join(...) or "Reached max_turns..."` only warned when *zero* text
+    had accumulated, so a lone "let me check a few more things" preamble came
+    back looking like a finished answer.
+    """
+    banner = (
+        f"[incomplete: stopped after {max_turns} tool-use turns without reaching a "
+        f"final answer -- rerun with a higher --max-turns]"
+    )
+    if not text_responses:
+        return banner
+    return "\n\n".join(text_responses) + "\n\n" + banner
+
+
 class Backend(ABC):
     """One instance per (provider, model). `dispatch` is the {tool_name: callable}
     table from tools.make_dispatch — identical across all backends, since the tools
     themselves (squeue, diff, log tail, KB search) don't know or care which LLM is
-    calling them."""
+    calling them.
+
+    max_turns/max_tokens are sized for the *widest* query shape, not the narrowest.
+    A curated-failure-mode hit resolves in 2-3 turns, but a file-review query
+    ("what does this .input do, and what does it depend on?") spends its first
+    three turns on search_knowledge/search_gotchas/search_manual before read_file
+    ever opens the file, then follows INPUT_FILE_INCLUDE chains from there. At the
+    original 6/1024 those queries ran out of loop and returned partial text -- or,
+    if no turn had emitted text yet, nothing at all."""
 
     @abstractmethod
     def diagnose(
@@ -26,7 +51,7 @@ class Backend(ABC):
         user_message: str,
         tool_schemas: list[dict[str, Any]],
         dispatch: dict[str, Callable[..., str]],
-        max_turns: int = 6,
-        max_tokens: int = 1024,
+        max_turns: int = 15,
+        max_tokens: int = 4096,
     ) -> str:
         ...

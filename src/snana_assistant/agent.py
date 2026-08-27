@@ -134,8 +134,10 @@ class Agent:
             self.backend = _autodetect_backend()
 
 
-    def diagnose(self, user_message: str, max_turns: int = 6) -> str:
-        response = self.backend.diagnose(SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.dispatch, max_turns)
+    def diagnose(self, user_message: str, max_turns: int = 15, max_tokens: int = 4096) -> str:
+        response = self.backend.diagnose(
+            SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.dispatch, max_turns, max_tokens,
+        )
         
         # Check if any entry ID is cited in square brackets in the response
         has_citation = False

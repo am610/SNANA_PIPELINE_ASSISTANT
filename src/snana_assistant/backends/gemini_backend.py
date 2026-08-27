@@ -11,7 +11,7 @@ import os
 import time
 from typing import Any, Callable
 
-from .base import Backend
+from .base import Backend, truncated as _truncated
 
 try:
     from google import genai
@@ -41,7 +41,7 @@ class GeminiBackend(Backend):
         self.client = genai.Client(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6, max_tokens=1024) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096) -> str:
         tool = _to_gemini_tool(tool_schemas)
         config = types.GenerateContentConfig(system_instruction=system_prompt, tools=[tool], max_output_tokens=max_tokens)
         contents: list[types.Content] = [
@@ -83,7 +83,7 @@ class GeminiBackend(Backend):
                     types.Part.from_function_response(name=fc.name, response={"result": str(result)})
                 )
             contents.append(types.Content(role="user", parts=response_parts))
-        return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
+        return _truncated(text_responses, max_turns)
 
 
 def _call(dispatch: dict[str, Callable], name: str, kwargs: dict) -> str:

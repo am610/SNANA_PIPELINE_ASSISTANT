@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from .base import Backend
+from .base import Backend, truncated as _truncated
 
 try:
     import anthropic
@@ -23,7 +23,7 @@ class AnthropicBackend(Backend):
         self.client = anthropic.Anthropic(api_key=key)
         self.model = model or os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=6, max_tokens=1024) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096) -> str:
         messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
         text_responses = []
         for _ in range(max_turns):
@@ -51,7 +51,7 @@ class AnthropicBackend(Backend):
                     result = "No matches or empty output."
                 tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
             messages.append({"role": "user", "content": tool_results})
-        return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
+        return _truncated(text_responses, max_turns)
 
 
 def _call(dispatch: dict[str, Callable], name: str, kwargs: dict) -> str:

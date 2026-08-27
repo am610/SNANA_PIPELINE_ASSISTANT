@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-08-27
+
+### Fixed
+- **Empty or truncated `diagnose` output on file-review queries.** The agent loop's
+  defaults (`max_turns=6`, `max_tokens=1024`) were sized for curated-failure-mode
+  lookups, which resolve in 2-3 turns. Informational queries -- "check this .input
+  file, what does it depend on, what does it do?" -- spend their first three turns on
+  `search_knowledge`/`search_gotchas`/`search_manual` before `read_file` opens
+  anything, then follow `INPUT_FILE_INCLUDE` chains, so they ran out of loop and
+  returned a partial sentence or no output at all. Raised to `max_turns=15`,
+  `max_tokens=4096` across all backends. This surfaced when the `read_file` tool was
+  added without a matching budget increase.
+
+### Added
+- `--max-turns` / `--max-tokens` flags on `snana-assistant diagnose`, so users can
+  escalate a truncated investigation without editing the source.
+- Eval case + fixtures (`eval/fixtures/`) covering the file-review query shape, and
+  `expect_contains` assertions in the harness for cases with no entry ID to cite.
+  Every case now also fails on a truncated response.
+
+### Changed
+- A run that exhausts `max_turns` is always marked `[incomplete: ...]`. Previously
+  the warning appeared only when *zero* text had accumulated, so a lone preamble
+  sentence was returned looking like a finished answer.
+
 ## [0.1.0] - 2026-08-21
 
 ### Added
