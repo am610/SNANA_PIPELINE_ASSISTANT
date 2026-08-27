@@ -13,8 +13,10 @@ An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically di
 
 ## Quickstart
 
-> **Not yet on PyPI.** `pip install snana-assistant` does not work — the package has not
-> been published. Install from source (below) or use the [container](#container-no-clone-no-build).
+> **Not distributed via PyPI.** `pip install snana-assistant` will not work and is not
+> planned — install from source (below) or use the
+> [container](#container-no-clone-no-build). Both track `main` directly, which is what
+> cluster users and collaborators actually want.
 
 ### Option A: From Source (Recommended for Collaborators / Midway)
 To run on Midway or other clusters, clone and install locally. 

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-08-27
+
+### Changed
+- **Lookup questions no longer open with a knowledge-base search -- 5 round trips down
+  to 3.** `SYSTEM_PROMPT` mandated `search_knowledge` on the very first turn of *every*
+  query. The curated database holds failure modes, so for "what does this input file do"
+  it returned nothing useful while costing a full model round trip the user waited
+  through. The prompt now classifies the request first: a SYMPTOM (failure, error, crash,
+  abort, wrong output) still requires `search_knowledge` verbatim on turn one, preserving
+  every citation guarantee; a LOOKUP goes straight to the tool that answers it.
+
+  Measured A/B on the same queries: lookup 5 -> 3 round trips, 25.8s -> 18.1s (-30%);
+  symptom unchanged at 2 round trips with `search_knowledge` still first. Eval 22/22,
+  including all 20 citation cases.
+
 ## [0.3.1] - 2026-08-27
 
 ### Added
