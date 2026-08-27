@@ -265,4 +265,4 @@ disagree.)**
   **Current state: container image live and pullable by anyone; KB scope tags all
   valid; Phase 2(a) (scheduled ingestion) is the last unstarted item on the original
   priority list, still blocked on the GitHub Actions secret only Ayan can add.**
-
+- 2026-08-27 — (Antigravity) Loaded all historical SNANA, Claude, Codex, and Hostlib-related memories on NERSC. Diagnosed a temporary Lustre client sync lock hang (cl_syn) affecting scratch, and successfully bypassed it by copying code and configurations to a globally shared home directory workspace (~/SNANA_PIPELINE_ASSISTANT_DEV) and a node-local /tmp workspace. Verified that the entire 20-case evaluation suite passes successfully (100% success rate). Directly tested the CLI diagnose command on Midway (UChicago cluster) and resolved an editable installation error for older pip environments (pip < 21.3) by upgrading pip. Updated README.md on GitHub to add clear Midway/custom-cluster git installation instructions and pip upgrade troubleshooting.
