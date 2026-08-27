@@ -22,16 +22,37 @@ snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fail
 ```
 
 ### Option B: From Source (Recommended for Collaborators / Midway)
-To run on Midway or other clusters, clone and install locally:
+To run on Midway or other clusters, clone and install locally. 
+
+First, ensure you are using **Python 3.10 or higher**. You can set up your environment using either **Conda** or a standard **virtualenv**:
+
+#### 1. Setup using Conda (Recommended if Conda is active on your cluster)
+```bash
+# Create and activate a Python 3.10 environment
+conda create -n snana_env python=3.10 -y
+conda activate snana_env
+
+# Clone and install the package
+git clone https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git
+cd SNANA_PIPELINE_ASSISTANT
+pip install --upgrade pip
+pip install -e .[all]
+```
+
+#### 2. Setup using a standard virtualenv
 ```bash
 git clone https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git
 cd SNANA_PIPELINE_ASSISTANT
 
+# (Optional: load python/3.10 if default is older)
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip  # Crucial on older cluster environments
 pip install -e .[all]
+```
 
+#### Then, configure and run:
+```bash
 snana-assistant init
 snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
