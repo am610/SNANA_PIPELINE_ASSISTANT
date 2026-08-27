@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-27
+
+### Added
+- **`list_directory` and `search_files` -- the assistant can now browse the filesystem.**
+  Previously every filesystem tool required a path the user already knew (`read_file`,
+  `read_log_tail`, `diff_config`), so "check the files in this directory and see which
+  script uses this input" was impossible: the assistant correctly reported it had no way
+  to list a directory and asked the user to paste an `ls`. `list_directory` is `ls`;
+  `search_files` is a bounded `grep -r` over file contents, which is what answers "which
+  script calls X" -- grep the filename and the calling Pippin YAML or submit script falls
+  out, instead of being inferred from naming convention.
+- `SYSTEM_PROMPT` now directs the assistant to find things itself rather than asking the
+  user for a listing or a path it could discover.
+
+  Bounds, because a Pippin output tree is enormous: 200 entries per listing, 50 matches
+  per search, depth 4, binary/FITS/gzip files skipped, symlinks not followed (`/project2`
+  is dense with them and following can loop). Truncation is always reported, never silent.
+
+  Diagnose mode only -- setup mode drafts configs from templates and has no reason to
+  browse.
+
 ## [0.2.1] - 2026-08-27
 
 ### Fixed

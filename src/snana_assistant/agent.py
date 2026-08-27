@@ -62,6 +62,15 @@ description inferred from a filename is worse than no answer. This applies even 
 makes the purpose look obvious. If the file also has an INPUT_FILE_INCLUDE (or similar
 reference to another config), read the referenced file too before describing the dependencies.
 If read_file fails, say the file could not be read -- do not fall back to guessing from the name.
+
+FIND THINGS YOURSELF. You can browse the filesystem: list_directory is `ls` and
+search_files is `grep -r`. Never ask the user to paste a directory listing, to tell you
+which config is the Pippin driver, or to hand you a path you could have found. Use them:
+- "what's in this directory", "check all the files here" -> list_directory
+- "which script/config calls X", "what uses this file", "where is X referenced" ->
+  search_files with X as the pattern, then read_file the hits to confirm
+- user names a file you cannot find -> list_directory to locate it before giving up
+Only ask the user for a path when the tools have actually failed to find it.
 """
 
 

@@ -89,6 +89,131 @@ def read_file(file_path: str, max_lines: int = 500) -> str:
         return f"Failed to read {p}: {exc}"
 
 
+# Bounds for the directory tools. A Pippin output tree is enormous and full of FITS/
+# gzipped sim output: an unbounded walk would blow the context budget long before it
+# found anything useful, so every limit below is deliberately conservative and any
+# truncation is reported rather than silently applied.
+_MAX_ENTRIES = 200
+_MAX_HITS = 50
+_MAX_DEPTH = 4
+_SKIP_DIRS = {".git", "__pycache__", ".ipynb_checkpoints", "node_modules", ".venv"}
+_BINARY_SUFFIXES = {
+    ".fits", ".gz", ".tar", ".zip", ".npy", ".npz", ".pdf", ".png", ".jpg", ".jpeg",
+    ".pyc", ".so", ".o", ".root", ".hdf5", ".h5", ".pkl", ".parquet",
+}
+
+
+def _looks_binary(p: Path) -> bool:
+    if p.suffix.lower() in _BINARY_SUFFIXES:
+        return True
+    try:
+        with open(p, "rb") as f:
+            return b"\0" in f.read(2048)
+    except Exception:
+        return True
+
+
+def list_directory(path: str = ".", pattern: str = "*") -> str:
+    """List directory contents -- the equivalent of `ls`, so the assistant can discover
+    which files exist instead of asking the user to paste an `ls` in."""
+    import fnmatch
+
+    d = Path(path).expanduser()
+    if not d.exists():
+        return f"Directory not found: {d}"
+    if not d.is_dir():
+        return f"Not a directory: {d} (use read_file for a single file)"
+    try:
+        entries = sorted(d.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+    except PermissionError:
+        return f"Permission denied: {d}"
+
+    rows, shown = [], 0
+    for e in entries:
+        if e.name.startswith("."):
+            continue
+        if not e.is_dir() and not fnmatch.fnmatch(e.name, pattern):
+            continue
+        if shown >= _MAX_ENTRIES:
+            rows.append(f"... [TRUNCATED at {_MAX_ENTRIES} entries; narrow with `pattern`]")
+            break
+        if e.is_dir():
+            rows.append(f"{e.name}/")
+        else:
+            try:
+                rows.append(f"{e.name}  ({e.stat().st_size:,} bytes)")
+            except OSError:
+                rows.append(e.name)
+        shown += 1
+
+    if not rows:
+        return f"No entries matching {pattern!r} in {d}"
+    return f"{d} ({shown} shown):\n" + "\n".join(f"  {r}" for r in rows)
+
+
+def search_files(pattern: str, path: str = ".", glob: str = "*", recursive: bool = True) -> str:
+    """Search file *contents* for a string -- a bounded `grep -r`.
+
+    This is what answers "which script calls this input file?": grep the filename across
+    the directory and the calling Pippin YAML / submit script falls out directly, instead
+    of being inferred from naming convention.
+    """
+    import fnmatch
+
+    root = Path(path).expanduser()
+    if not root.exists():
+        return f"Path not found: {root}"
+    needle = pattern.lower()
+    hits, scanned, truncated = [], 0, False
+
+    def walk(d: Path, depth: int):
+        nonlocal truncated
+        if truncated or depth > _MAX_DEPTH:
+            return
+        try:
+            entries = sorted(d.iterdir())
+        except (PermissionError, OSError):
+            return
+        for e in entries:
+            if truncated:
+                return
+            if e.is_symlink():
+                continue  # /project2 is dense with symlinks; following them can loop
+            if e.is_dir():
+                if recursive and e.name not in _SKIP_DIRS and not e.name.startswith("."):
+                    walk(e, depth + 1)
+                continue
+            if not fnmatch.fnmatch(e.name, glob) or _looks_binary(e):
+                continue
+            scan_file(e)
+
+    def scan_file(f: Path):
+        nonlocal scanned, truncated
+        scanned += 1
+        try:
+            for n, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                if needle in line.lower():
+                    if len(hits) >= _MAX_HITS:
+                        truncated = True
+                        return
+                    hits.append(f"{f}:{n}: {line.strip()[:200]}")
+        except Exception:
+            return
+
+    if root.is_file():
+        scan_file(root)
+    else:
+        walk(root, 0)
+
+    if not hits:
+        return f"No matches for {pattern!r} in {root} ({scanned} text files searched)."
+    out = f"{len(hits)} match(es) for {pattern!r} in {root} ({scanned} text files searched):\n"
+    out += "\n".join(f"  {h}" for h in hits)
+    if truncated:
+        out += f"\n... [TRUNCATED at {_MAX_HITS} matches; narrow with `glob` or a more specific pattern]"
+    return out
+
+
 DEFAULT_MANUAL_INDEX_PATH = Path(__file__).resolve().parent / "data" / "manual_chunks.json"
 if not DEFAULT_MANUAL_INDEX_PATH.exists():
     DEFAULT_MANUAL_INDEX_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "manual_chunks.json"
@@ -331,6 +456,32 @@ TOOL_SCHEMAS = [
         },
     },
     {
+        "name": "list_directory",
+        "description": "List the files and subdirectories in a directory, like `ls`. Use this to discover what exists before guessing at filenames -- e.g. to find the Pippin YAML, submit script, or log files in the user's working directory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Directory to list (default '.', the current working directory)."},
+                "pattern": {"type": "string", "description": "Optional glob to filter files, e.g. '*.yml' or '*.input'. Directories are always shown."},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "search_files",
+        "description": "Search file CONTENTS for a string across a directory tree, like `grep -r`. This is how you find which script or config references something: to answer 'what calls sim_ia_salt_des5yr.input?', search for that filename with glob '*.yml' or '*'. Returns file:line: matched-text.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pattern": {"type": "string", "description": "Text to search for (case-insensitive substring, not a regex)."},
+                "path": {"type": "string", "description": "Directory or file to search (default '.')."},
+                "glob": {"type": "string", "description": "Only search files matching this glob, e.g. '*.yml' or '*.input' (default '*')."},
+                "recursive": {"type": "boolean", "description": "Recurse into subdirectories (default true, max depth 4)."},
+            },
+            "required": ["pattern"],
+        },
+    },
+    {
         "name": "read_file",
         "description": "Read the contents of a configuration, input, or text file on disk to check parameter settings and options.",
         "input_schema": {
@@ -439,6 +590,8 @@ def make_dispatch(kb: KnowledgeBase):
         "diff_config": lambda **kw: diff_config(**kw),
         "read_log_tail": lambda **kw: read_log_tail(**kw),
         "read_file": lambda **kw: read_file(**kw),
+        "list_directory": lambda **kw: list_directory(**kw),
+        "search_files": lambda **kw: search_files(**kw),
         "search_knowledge": lambda **kw: search_knowledge(kb=kb, **kw),
         "search_manual": lambda **kw: search_manual(**kw),
         "search_gotchas": lambda **kw: search_gotchas(**kw),

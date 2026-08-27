@@ -82,6 +82,26 @@ This assistant is distributed in two tiers, sharing the same underlying knowledg
 
 ---
 
+## Finding things: the assistant browses for you
+
+You don't need to know a path, or paste an `ls`. The assistant can list directories and
+grep file contents itself, so questions like these work directly:
+
+```bash
+snana-assistant diagnose "check the files in this directory and see which script uses sim_ia_salt_des5yr.input"
+snana-assistant diagnose "where is DES-SN5YR_DES.HOSTLIB referenced?"
+```
+
+It will `list_directory` to see what exists, `search_files` to find which script or YAML
+references the file, then read the hits to confirm — rather than inferring from naming
+convention or asking you to supply the path.
+
+Searches are bounded so a Pippin output tree can't swamp the answer: 200 entries per
+listing, 50 matches per search, 4 levels deep, binaries/FITS/gzip skipped, symlinks not
+followed. Anything truncated is reported.
+
+---
+
 ## Interactive sessions (`chat`)
 
 `diagnose` answers one question and forgets it. For anything that takes a few

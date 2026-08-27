@@ -1,6 +1,6 @@
 [project]
 name = "snana-assistant"
-version = "0.2.1"
+version = "0.3.0"
 description = "LLM-based ops assistant for SNANA/Pippin pipelines"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0"]
