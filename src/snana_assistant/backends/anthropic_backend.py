@@ -46,8 +46,10 @@ class AnthropicBackend(Backend):
             for block in response.content:
                 if block.type != "tool_use":
                     continue
-                result = _call(dispatch, block.name, block.input)
-                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": str(result)})
+                result = str(_call(dispatch, block.name, block.input)).strip()
+                if not result:
+                    result = "No matches or empty output."
+                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
             messages.append({"role": "user", "content": tool_results})
         return "\n\n".join(text_responses) or "Reached max_turns without a final answer."
 
