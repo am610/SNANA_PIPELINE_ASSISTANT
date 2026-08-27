@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-27
+
+### Added
+- **`snana-assistant chat` -- multi-turn sessions.** Previously every invocation was a
+  standalone question: the message list was local to `Backend.diagnose()` and discarded
+  on return, so follow-ups started from nothing. `chat` threads one history through the
+  session, so "what about line 12?" or "why does that matter?" resolve against what was
+  already established, and files already read are not re-read. `/reset` clears the
+  conversation, `/exit` (or Ctrl-D) quits.
+- `Backend.diagnose()` accepts an optional `history` list, appended to in place. Omit it
+  for the previous one-shot behaviour -- `diagnose` is unchanged. History contents are
+  provider-specific and must be used only with the backend that created them.
+- `Agent.session()` / `Session.ask()` for programmatic multi-turn use.
+
+### Fixed
+- The final assistant turn is now appended to the message list before returning. It was
+  previously dropped on the return path, which was invisible in one-shot mode but would
+  have left a resumed conversation blind to the assistant's own last answer.
+- `log_uncaptured_query` fires at most once per chat session. Per-turn logging would
+  file every follow-up as its own unmatched failure mode, polluting `feedback` data.
+
+### Changed
+- Chat sessions use `CHAT_SYSTEM_PROMPT`, which scopes the "always call search_knowledge
+  on the very first turn" rule to new problems rather than every message. Set once at
+  session start, since the OpenAI backend bakes the system prompt into the message list
+  and cannot swap it mid-conversation.
+
 ## [0.1.1] - 2026-08-27
 
 ### Fixed

@@ -41,12 +41,11 @@ class GeminiBackend(Backend):
         self.client = genai.Client(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None) -> str:
         tool = _to_gemini_tool(tool_schemas)
         config = types.GenerateContentConfig(system_instruction=system_prompt, tools=[tool], max_output_tokens=max_tokens)
-        contents: list[types.Content] = [
-            types.Content(role="user", parts=[types.Part(text=user_message)])
-        ]
+        contents: list[types.Content] = history if history is not None else []
+        contents.append(types.Content(role="user", parts=[types.Part(text=user_message)]))
         text_responses = []
         for _ in range(max_turns):
             retries = 5
@@ -72,10 +71,10 @@ class GeminiBackend(Backend):
                 text_responses.append(turn_text)
 
             function_calls = [p.function_call for p in candidate.content.parts if p.function_call]
+            contents.append(candidate.content)
             if not function_calls:
                 return "\n\n".join(text_responses)
 
-            contents.append(candidate.content)
             response_parts = []
             for fc in function_calls:
                 result = _call(dispatch, fc.name, dict(fc.args or {}))

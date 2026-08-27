@@ -28,6 +28,43 @@ def load_env() -> None:
     load_all_config_to_env()
 
 
+CHAT_BANNER = """SNANA assistant -- interactive session ({backend}).
+Follow-ups remember this conversation, including files already read.
+  /reset  start a fresh conversation (also frees up accumulated context)
+  /exit   quit  (Ctrl-D works too)
+"""
+
+
+def _run_chat(agent, max_turns: int, max_tokens: int) -> None:
+    session = agent.session()
+    print(CHAT_BANNER.format(backend=agent.backend.__class__.__name__))
+    while True:
+        try:
+            line = input("you> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if not line:
+            continue
+        if line in ("/exit", "/quit"):
+            return
+        if line == "/reset":
+            session.reset()
+            print("[conversation cleared]\n")
+            continue
+        try:
+            answer = session.ask(line, max_turns=max_turns, max_tokens=max_tokens)
+        except KeyboardInterrupt:
+            # Abandon this question, keep the session -- a long tool chain shouldn't
+            # cost the user everything established so far.
+            print("\n[interrupted]\n")
+            continue
+        except Exception as exc:
+            print(f"\n[error: {exc}]\n", file=sys.stderr)
+            continue
+        print(f"\n{answer}\n")
+
+
 def main() -> None:
     load_env()
     parser = argparse.ArgumentParser(prog="snana-assistant")
@@ -48,6 +85,18 @@ def main() -> None:
         "--max-tokens", type=int, default=4096,
         help="Token cap per model response (default: 4096).",
     )
+
+    chat_p = sub.add_parser(
+        "chat",
+        help="Multi-turn session: ask follow-ups that remember the earlier answers and "
+             "files already read.",
+    )
+    chat_p.add_argument(
+        "--provider", choices=["anthropic", "openai", "gemini", "local", "ollama"], default=None,
+        help="Force a specific backend instead of auto-detecting from which API key is set.",
+    )
+    chat_p.add_argument("--max-turns", type=int, default=15, help="Tool-use turns per question (default: 15).")
+    chat_p.add_argument("--max-tokens", type=int, default=4096, help="Token cap per model response (default: 4096).")
 
     promote_p = sub.add_parser("promote", help="Promote a knowledge base entry from unverified to verified.")
     promote_p.add_argument("entry_id", help="The ID of the entry to promote (e.g. 'hostlib-nbrlist-crazy-sep').")
@@ -84,6 +133,13 @@ def main() -> None:
             print(str(exc), file=sys.stderr)
             sys.exit(1)
         print(agent.diagnose(args.description, max_turns=args.max_turns, max_tokens=args.max_tokens))
+    elif args.command == "chat":
+        try:
+            agent = Agent(provider=args.provider)
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            sys.exit(1)
+        _run_chat(agent, args.max_turns, args.max_tokens)
     elif args.command == "promote":
         from .knowledge import KnowledgeBase
         kb = KnowledgeBase.load()

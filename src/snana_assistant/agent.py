@@ -57,6 +57,22 @@ If nothing matches the search_knowledge database, search the user's personal got
 """
 
 
+CHAT_SYSTEM_PROMPT = SYSTEM_PROMPT + """
+CONVERSATION MODE: this is a multi-turn session, not a single lookup. The rules above
+describe how to open an investigation; they apply to the FIRST message about a given
+problem, not to every message.
+
+- Call search_knowledge with the user's verbatim text when they raise a NEW problem or
+  change topic. For follow-ups about something already established this session
+  ("what about line 12?", "why does that matter?", "show me the other file"), answer
+  from the conversation and the tools directly -- do not re-run the same searches.
+- You still MUST cite the entry ID in square brackets whenever a curated failure mode
+  is what you are relying on, including when you are restating one from earlier.
+- Tool results already in the conversation stay valid. Do not re-read a file you have
+  read this session unless the user says it changed.
+"""
+
+
 SETUP_SYSTEM_PROMPT = """You are a SNANA/Pippin pipeline SETUP assistant. Your job is to draft a
 new Pippin job/pipeline config from the user's own past project templates, adapted to their
 new request. You do NOT diagnose failures here -- you scaffold new working configs.
@@ -152,6 +168,10 @@ class Agent:
 
         return response
 
+    def session(self) -> "Session":
+        """Start a multi-turn conversation sharing one message history."""
+        return Session(self)
+
     def setup_job(self, request: str, output_dir: str, max_turns: int = 20) -> str:
         """Job-setup mode (Phase: personal templates + scaffold-new-project).
         Drafts a new Pippin job from the user's own indexed templates, self-checks
@@ -168,3 +188,68 @@ class Agent:
             SETUP_SYSTEM_PROMPT, user_message, SETUP_TOOL_SCHEMAS, self.setup_dispatch,
             max_turns=max_turns, max_tokens=8192,
         )
+
+
+class Session:
+    """A running conversation with the assistant.
+
+    Holds one message history and hands it back to the backend on every turn, so
+    follow-ups see the earlier questions, answers, and tool results. The history is
+    provider-specific and opaque -- it belongs to the backend that built it.
+    """
+
+    def __init__(self, agent: Agent):
+        self.agent = agent
+        self.history: list = []
+        self._logged_uncaptured = False
+
+    @property
+    def turns(self) -> int:
+        return sum(1 for m in self.history if _is_user_turn(m))
+
+    def reset(self) -> None:
+        """Drop the conversation and start clean -- also the way to reclaim context
+        after a session has accumulated large file/manual tool results."""
+        self.history = []
+        self._logged_uncaptured = False
+
+    def ask(self, user_message: str, max_turns: int = 15, max_tokens: int = 4096) -> str:
+        response = self.agent.backend.diagnose(
+            CHAT_SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.agent.dispatch,
+            max_turns, max_tokens, history=self.history,
+        )
+
+        # Log an uncaptured query at most once per session. Per-turn logging would file
+        # every follow-up ("thanks, what about the WGTMAP?") as its own unmatched failure
+        # mode, which is noise in the data `snana-assistant feedback` reports from.
+        if not self._logged_uncaptured:
+            has_citation = any(f"[{entry.id}]" in response for entry in self.agent.kb.entries)
+            if not has_citation:
+                from .config import log_uncaptured_query
+                log_uncaptured_query(user_message)
+                self._logged_uncaptured = True
+
+        return response
+
+
+def _is_user_turn(message) -> bool:
+    """True for a real user message, across all three providers' history formats.
+
+    Tool results are also role="user" for Anthropic and Gemini, so counting roles alone
+    would overcount; a genuine user turn carries plain text, not tool_result parts.
+    """
+    role = getattr(message, "role", None) or (message.get("role") if isinstance(message, dict) else None)
+    if role != "user":
+        return False
+    content = getattr(message, "parts", None)
+    if content is None and isinstance(message, dict):
+        content = message.get("content")
+    if isinstance(content, str):
+        return True
+    if isinstance(content, list):
+        return not any(
+            (isinstance(b, dict) and b.get("type") == "tool_result")
+            or getattr(b, "function_response", None) is not None
+            for b in content
+        )
+    return False

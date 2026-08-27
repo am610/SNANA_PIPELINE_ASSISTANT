@@ -53,5 +53,18 @@ class Backend(ABC):
         dispatch: dict[str, Callable[..., str]],
         max_turns: int = 15,
         max_tokens: int = 4096,
+        history: list[Any] | None = None,
     ) -> str:
+        """Run one investigation and return the assistant's text.
+
+        `history` makes the call conversational. Pass the same list back on the next
+        call and the model sees everything that came before -- prior questions, its own
+        answers, and every tool result it collected. The backend appends this exchange
+        to it in place, including the final assistant turn.
+
+        The list's *contents* are provider-specific (Anthropic message dicts, OpenAI
+        message dicts, Gemini Contents) and callers must treat it as opaque: build it
+        with one backend, use it only with that backend. Omit it (the default) for
+        one-shot behaviour, where each call starts from an empty slate.
+        """
         ...

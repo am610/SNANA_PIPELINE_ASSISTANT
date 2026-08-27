@@ -38,12 +38,14 @@ class OpenAIBackend(Backend):
         self.client = OpenAI(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None) -> str:
         tools = _to_openai_tools(tool_schemas)
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ]
+        messages: list[dict[str, Any]] = history if history is not None else []
+        # Unlike Anthropic/Gemini, the system prompt is a message here -- only seed it
+        # once, or a resumed conversation grows a duplicate system turn per exchange.
+        if not messages:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_message})
         text_responses = []
         for _ in range(max_turns):
             response = self.client.chat.completions.create(
@@ -54,10 +56,10 @@ class OpenAIBackend(Backend):
             if turn_text:
                 text_responses.append(turn_text)
 
+            messages.append(msg.model_dump(exclude_unset=True))
             if not msg.tool_calls:
                 return "\n\n".join(text_responses)
 
-            messages.append(msg.model_dump(exclude_unset=True))
             for tc in msg.tool_calls:
                 kwargs = json.loads(tc.function.arguments or "{}")
                 result = _call(dispatch, tc.function.name, kwargs)

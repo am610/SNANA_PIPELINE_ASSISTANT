@@ -13,19 +13,10 @@ An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically di
 
 ## Quickstart
 
-### Option A: From PyPI
-```bash
-pip install --upgrade pip  # Ensure pip is up-to-date
-pip install snana-assistant[all]
-snana-assistant init
+> **Not yet on PyPI.** `pip install snana-assistant` does not work — the package has not
+> been published. Install from source (below) or use the [container](#container-no-clone-no-build).
 
-# Set your API key (supports ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY)
-export ANTHROPIC_API_KEY="your-api-key"
-
-snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
-```
-
-### Option B: From Source (Recommended for Collaborators / Midway)
+### Option A: From Source (Recommended for Collaborators / Midway)
 To run on Midway or other clusters, clone and install locally. 
 
 First, ensure you are using **Python 3.10 or higher**. You can set up your environment using either **Conda** or a standard **virtualenv**:
@@ -88,6 +79,40 @@ This assistant is distributed in two tiers, sharing the same underlying knowledg
 
 * **Quick Start — Claude Code Skill** ([`skill/SKILL.md`](skill/SKILL.md)): Zero setup, uses whatever Claude Code session you already have running. Best-effort (model and tool execution depend on your Claude Code plan, not pinned, and not covered by the eval harness).
 * **Scripted & Reproducible — Standalone CLI** (this package): Pinned model, deterministic Python tools, covered by an evaluation suite ([`cases.yaml`](eval/cases.yaml)). Runs non-interactively (cron/CI/scripted) and supports local offline models.
+
+---
+
+## Interactive sessions (`chat`)
+
+`diagnose` answers one question and forgets it. For anything that takes a few
+follow-ups, use `chat` — the conversation is carried across turns, so the assistant
+remembers what you asked, what it answered, and which files it already read:
+
+```bash
+snana-assistant chat
+```
+
+```
+you> check sim_ia_salt_des5yr.input -- what does it do and what does it depend on?
+...
+you> what about that WGTMAP path, will it resolve under Pippin?
+you> /reset     # start a fresh conversation
+you> /exit      # quit (Ctrl-D also works)
+```
+
+Long sessions accumulate context — every file and manual chunk the assistant read stays
+in the conversation and is resent each turn, which costs tokens. `/reset` when you move
+to an unrelated problem.
+
+Programmatic equivalent:
+
+```python
+from snana_assistant.agent import Agent
+
+session = Agent().session()
+session.ask("what does sim_ia_salt_des5yr.input do?")
+session.ask("and what was the GENVERSION in it?")   # remembers the file
+```
 
 ---
 
