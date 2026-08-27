@@ -65,6 +65,20 @@ export ANTHROPIC_API_KEY="your-api-key"
 snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
 
+#### Subsequent Sessions (Re-activating)
+In future cluster logins, you can run the assistant from **any directory** (it does not need to be the cloned repository directory) by running:
+
+```bash
+# If you set up using Conda:
+conda activate snana_env
+
+# If you set up using a virtualenv:
+source /path/to/SNANA_PIPELINE_ASSISTANT/.venv/bin/activate
+
+# (Optional) Auto-load your API key every session by appending it once to ~/.bashrc:
+# echo 'export ANTHROPIC_API_KEY="your-api-key"' >> ~/.bashrc
+```
+
 ---
 
 ## Two ways to run this
