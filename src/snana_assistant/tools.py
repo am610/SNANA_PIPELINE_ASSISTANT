@@ -74,6 +74,21 @@ def read_log_tail(log_path: str, n_lines: int = 200) -> str:
     return header + "\n".join(tail[-80:])  # cap raw tail shown to keep context bounded
 
 
+def read_file(file_path: str, max_lines: int = 500) -> str:
+    """Reads the contents of a file (up to max_lines) to check configuration parameters or input settings."""
+    p = Path(file_path)
+    if not p.exists():
+        return f"File not found: {p}"
+    try:
+        lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+        content = "\n".join(lines[:max_lines])
+        if len(lines) > max_lines:
+            content += f"\n... [TRUNCATED, showing first {max_lines} of {len(lines)} lines] ..."
+        return content
+    except Exception as exc:
+        return f"Failed to read {p}: {exc}"
+
+
 DEFAULT_MANUAL_INDEX_PATH = Path(__file__).resolve().parent / "data" / "manual_chunks.json"
 if not DEFAULT_MANUAL_INDEX_PATH.exists():
     DEFAULT_MANUAL_INDEX_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "manual_chunks.json"
@@ -316,6 +331,18 @@ TOOL_SCHEMAS = [
         },
     },
     {
+        "name": "read_file",
+        "description": "Read the contents of a configuration, input, or text file on disk to check parameter settings and options.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Relative or absolute path to the file to read (e.g. 'sim_ia_salt_des5yr.input')."},
+                "max_lines": {"type": "integer", "description": "Maximum number of lines to read (default 500)."}
+            },
+            "required": ["file_path"]
+        }
+    },
+    {
         "name": "search_knowledge",
         "description": "Search the curated SNANA/Pippin failure-mode knowledge base for entries matching a symptom or error text.",
         "input_schema": {
@@ -411,6 +438,7 @@ def make_dispatch(kb: KnowledgeBase):
         "check_job_status": lambda **kw: check_job_status(**kw),
         "diff_config": lambda **kw: diff_config(**kw),
         "read_log_tail": lambda **kw: read_log_tail(**kw),
+        "read_file": lambda **kw: read_file(**kw),
         "search_knowledge": lambda **kw: search_knowledge(kb=kb, **kw),
         "search_manual": lambda **kw: search_manual(**kw),
         "search_gotchas": lambda **kw: search_gotchas(**kw),
