@@ -17,6 +17,7 @@ nav:
   - Installation: installation.md
   - Usage: usage.md
   - Curated Gotchas: gotchas.md
+  - Trying It Out: TESTING.md
 
 markdown_extensions:
   - admonition
