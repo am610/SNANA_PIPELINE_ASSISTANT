@@ -77,6 +77,7 @@ source /path/to/SNANA_PIPELINE_ASSISTANT/.venv/bin/activate
 
 # (Optional) Auto-load your API key every session by appending it once to ~/.bashrc:
 # echo 'export ANTHROPIC_API_KEY="your-api-key"' >> ~/.bashrc
+# snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
 
 ---
