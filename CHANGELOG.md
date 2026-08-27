@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-08-27
+
+### Fixed
+- **The assistant could describe a named file without reading it.** Asked about a
+  `sim_*.input`, it would produce a confident, plausible description inferred purely
+  from the filename and SNANA naming conventions, only admitting it had not opened the
+  file when challenged. `SYSTEM_PROMPT` now requires `read_file` before any claim about
+  a named file's contents, requires following `INPUT_FILE_INCLUDE` references, and
+  forbids falling back to the filename when a read fails.
+
+  Verified by direct A/B against a real user file: without the rule the assistant
+  answered "Based on standard SNANA naming conventions... using the SALT2 light-curve
+  model" and never opened the file (the file actually uses SALT3); with it, the file is
+  read and reported correctly.
+
+### Added
+- `cwd` field on eval cases, so a case can run from a directory and name a file by a
+  bare filename -- the phrasing that triggers filename-guessing.
+- Eval coverage for the file-review path (`eval/fixtures/sim_ia_salt3_lowz.input`, a
+  fixture whose contents contradict its name). Note this is coverage, not a regression
+  guard: control runs with the rule removed still passed, so the behaviour is model
+  variance rather than something the harness reliably detects. See the case comment.
+
 ## [0.2.0] - 2026-08-27
 
 ### Added

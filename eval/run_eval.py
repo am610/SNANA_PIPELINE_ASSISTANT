@@ -8,6 +8,7 @@ knowledge-base entry ID was cited in the diagnosis.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 import yaml
@@ -68,6 +69,15 @@ def run_eval(cases_path: Path, provider: str | None = None, verbose: bool = Fals
         if verbose:
             print(f"Query: {query}")
         
+        # Some cases must run from a specific directory: naming a file by a bare name,
+        # with no path, is exactly the phrasing that tempts the model to describe it from
+        # the filename. A case that supplies a path cues a read on its own and would pass
+        # even with that behaviour regressed.
+        case_cwd = case.get("cwd")
+        prev_cwd = os.getcwd()
+        if case_cwd:
+            os.chdir((cases_path.parent / case_cwd).resolve())
+
         case_start = time.time()
         try:
             response = agent.diagnose(query)
@@ -108,7 +118,9 @@ def run_eval(cases_path: Path, provider: str | None = None, verbose: bool = Fals
                 "error": str(exc),
                 "elapsed_seconds": case_elapsed,
             })
-            
+        finally:
+            os.chdir(prev_cwd)
+
         print("-" * 60)
 
     elapsed_total = time.time() - start_time

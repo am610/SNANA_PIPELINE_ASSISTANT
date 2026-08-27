@@ -1,0 +1,22 @@
+# Eval fixture: a deliberate NAME/CONTENT TRAP. Do not "fix" the mismatch below.
+#
+# The filename says Ia + SALT3 + low-z. The contents are the opposite: core-collapse
+# NON1ASED templates, a high-z range, and a LSST-style SIMLIB. An assistant that infers
+# from the filename will describe SNe Ia with SALT3; one that actually calls read_file
+# will report NON1ASED core-collapse. That difference is what the eval case asserts.
+
+GENVERSION: EVAL_FIXTURE_TRAP
+GENSOURCE:  RANDOM
+
+GENMODEL:   NON1ASED
+GENTYPE:    20
+
+NON1A_KEYS: 5
+  INDEX  WGT  MAGOFF  MAGSMEAR  SNTYPE
+NON1A:   201  0.020   0.000     0.900   20
+NON1A:   204  0.019   0.000     0.900   20
+
+GENRANGE_REDSHIFT:  0.50  1.20
+SIMLIB_FILE: LSST_WFD_DDF.SIMLIB
+
+NGENTOT_LC: 250

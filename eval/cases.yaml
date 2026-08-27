@@ -121,3 +121,19 @@
   expect_contains:
     - FORMAT_MAS
     - sim_review_survey.input
+
+# Coverage for the file-review path with a bare filename (no path), against a fixture
+# whose contents contradict its name: sim_ia_salt3_lowz.input actually holds NON1ASED
+# core-collapse templates, so "Type Ia / SALT3" in the answer means the name was guessed
+# from and NON1ASED means the file was really read.
+#
+# HONEST LIMITATION: this is coverage, not a regression guard. Control runs with the
+# read-the-file rule stripped from SYSTEM_PROMPT still PASSED (three variants tried:
+# with a path, with the trap fixture, and with cwd + bare filename). The failure it is
+# meant to catch reproduced reliably only against a real user file outside the repo, so
+# treat a pass here as "the path works", not as proof the guessing behaviour is fixed.
+- query: >
+    Briefly, what does sim_ia_salt3_lowz.input do? What kind of supernovae does it simulate?
+  cwd: fixtures
+  expect_contains:
+    - NON1ASED
