@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1] - 2026-08-27
 
+### Added
+- **Streamed output.** `diagnose` and `chat` now print the answer as it is generated
+  instead of after it completes. This does not make the work finish sooner -- it removes
+  the dead time where the terminal sat blank, which is most of what "slow" felt like.
+  Measured: first visible text at 2.5s instead of 4.7s (**47% less dead time**) on a
+  short query; the gap is larger on long answers.
+
+  Streaming is on when stdout is a terminal and off when piped or redirected, so
+  scripted callers still get one clean block. `--no-stream` forces the old behaviour.
+  Anthropic backend only; other backends accept `on_text` and ignore it.
+
 ### Changed
 - **Prompt caching on the Anthropic backend -- ~48% off the input-token bill.** Every
   turn resent the entire conversation: the system prompt, ~2.7k tokens of byte-identical

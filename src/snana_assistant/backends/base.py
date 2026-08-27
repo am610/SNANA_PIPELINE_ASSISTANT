@@ -54,6 +54,7 @@ class Backend(ABC):
         max_turns: int = 15,
         max_tokens: int = 4096,
         history: list[Any] | None = None,
+        on_text: Callable[[str], None] | None = None,
     ) -> str:
         """Run one investigation and return the assistant's text.
 
@@ -66,5 +67,10 @@ class Backend(ABC):
         message dicts, Gemini Contents) and callers must treat it as opaque: build it
         with one backend, use it only with that backend. Omit it (the default) for
         one-shot behaviour, where each call starts from an empty slate.
+
+        `on_text`, if given, is called with text fragments as they are generated. This
+        does not reduce total latency -- it changes when the user first sees output
+        instead of a blank terminal, which is most of what "slow" feels like here.
+        Backends without streaming ignore it and return the full text as usual.
         """
         ...

@@ -35,7 +35,16 @@ Follow-ups remember this conversation, including files already read.
 """
 
 
-def _run_chat(agent, max_turns: int, max_tokens: int) -> None:
+def _make_printer():
+    """stdout writer for streamed fragments. Flushes per chunk -- buffered output would
+    defeat the entire point by holding text until the turn completed anyway."""
+    def _print(chunk: str) -> None:
+        sys.stdout.write(chunk)
+        sys.stdout.flush()
+    return _print
+
+
+def _run_chat(agent, max_turns: int, max_tokens: int, stream: bool = True) -> None:
     session = agent.session()
     print(CHAT_BANNER.format(backend=agent.backend.__class__.__name__))
     while True:
@@ -53,7 +62,12 @@ def _run_chat(agent, max_turns: int, max_tokens: int) -> None:
             print("[conversation cleared]\n")
             continue
         try:
-            answer = session.ask(line, max_turns=max_turns, max_tokens=max_tokens)
+            if stream:
+                print()
+            answer = session.ask(
+                line, max_turns=max_turns, max_tokens=max_tokens,
+                on_text=_make_printer() if stream else None,
+            )
         except KeyboardInterrupt:
             # Abandon this question, keep the session -- a long tool chain shouldn't
             # cost the user everything established so far.
@@ -62,7 +76,7 @@ def _run_chat(agent, max_turns: int, max_tokens: int) -> None:
         except Exception as exc:
             print(f"\n[error: {exc}]\n", file=sys.stderr)
             continue
-        print(f"\n{answer}\n")
+        print("\n" if stream else f"\n{answer}\n")
 
 
 def main() -> None:
@@ -85,6 +99,10 @@ def main() -> None:
         "--max-tokens", type=int, default=4096,
         help="Token cap per model response (default: 4096).",
     )
+    diagnose_p.add_argument(
+        "--no-stream", action="store_true",
+        help="Wait for the full answer instead of streaming it as it is written.",
+    )
 
     chat_p = sub.add_parser(
         "chat",
@@ -97,6 +115,7 @@ def main() -> None:
     )
     chat_p.add_argument("--max-turns", type=int, default=15, help="Tool-use turns per question (default: 15).")
     chat_p.add_argument("--max-tokens", type=int, default=4096, help="Token cap per model response (default: 4096).")
+    chat_p.add_argument("--no-stream", action="store_true", help="Wait for the full answer instead of streaming it as it is written.")
 
     promote_p = sub.add_parser("promote", help="Promote a knowledge base entry from unverified to verified.")
     promote_p.add_argument("entry_id", help="The ID of the entry to promote (e.g. 'hostlib-nbrlist-crazy-sep').")
@@ -132,14 +151,25 @@ def main() -> None:
         except RuntimeError as exc:
             print(str(exc), file=sys.stderr)
             sys.exit(1)
-        print(agent.diagnose(args.description, max_turns=args.max_turns, max_tokens=args.max_tokens))
+        # Stream to stdout when attached to a terminal; when piped or redirected,
+        # fall back to printing once at the end so downstream consumers get clean output.
+        streaming = sys.stdout.isatty() and not args.no_stream
+        printer = _make_printer() if streaming else None
+        answer = agent.diagnose(
+            args.description, max_turns=args.max_turns, max_tokens=args.max_tokens,
+            on_text=printer,
+        )
+        if streaming:
+            print()
+        else:
+            print(answer)
     elif args.command == "chat":
         try:
             agent = Agent(provider=args.provider)
         except RuntimeError as exc:
             print(str(exc), file=sys.stderr)
             sys.exit(1)
-        _run_chat(agent, args.max_turns, args.max_tokens)
+        _run_chat(agent, args.max_turns, args.max_tokens, stream=not args.no_stream)
     elif args.command == "promote":
         from .knowledge import KnowledgeBase
         kb = KnowledgeBase.load()

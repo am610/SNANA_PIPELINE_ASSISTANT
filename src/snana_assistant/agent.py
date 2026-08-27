@@ -167,9 +167,10 @@ class Agent:
             self.backend = _autodetect_backend()
 
 
-    def diagnose(self, user_message: str, max_turns: int = 15, max_tokens: int = 4096) -> str:
+    def diagnose(self, user_message: str, max_turns: int = 15, max_tokens: int = 4096, on_text=None) -> str:
         response = self.backend.diagnose(
             SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.dispatch, max_turns, max_tokens,
+            on_text=on_text,
         )
         
         # Check if any entry ID is cited in square brackets in the response
@@ -230,10 +231,10 @@ class Session:
         self.history = []
         self._logged_uncaptured = False
 
-    def ask(self, user_message: str, max_turns: int = 15, max_tokens: int = 4096) -> str:
+    def ask(self, user_message: str, max_turns: int = 15, max_tokens: int = 4096, on_text=None) -> str:
         response = self.agent.backend.diagnose(
             CHAT_SYSTEM_PROMPT, user_message, TOOL_SCHEMAS, self.agent.dispatch,
-            max_turns, max_tokens, history=self.history,
+            max_turns, max_tokens, history=self.history, on_text=on_text,
         )
 
         # Log an uncaptured query at most once per session. Per-turn logging would file

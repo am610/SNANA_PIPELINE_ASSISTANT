@@ -38,7 +38,7 @@ class OpenAIBackend(Backend):
         self.client = OpenAI(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None, on_text=None) -> str:
         tools = _to_openai_tools(tool_schemas)
         messages: list[dict[str, Any]] = history if history is not None else []
         # Unlike Anthropic/Gemini, the system prompt is a message here -- only seed it

@@ -41,7 +41,7 @@ class GeminiBackend(Backend):
         self.client = genai.Client(api_key=key)
         self.model = model
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None, on_text=None) -> str:
         tool = _to_gemini_tool(tool_schemas)
         config = types.GenerateContentConfig(system_instruction=system_prompt, tools=[tool], max_output_tokens=max_tokens)
         contents: list[types.Content] = history if history is not None else []

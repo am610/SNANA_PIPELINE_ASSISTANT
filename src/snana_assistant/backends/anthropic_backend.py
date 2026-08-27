@@ -66,7 +66,7 @@ class AnthropicBackend(Backend):
         self.client = anthropic.Anthropic(api_key=key)
         self.model = model or os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 
-    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None) -> str:
+    def diagnose(self, system_prompt, user_message, tool_schemas, dispatch, max_turns=15, max_tokens=4096, history=None, on_text=None) -> str:
         messages: list[dict[str, Any]] = history if history is not None else []
         messages.append({"role": "user", "content": user_message})
         text_responses = []
@@ -74,13 +74,23 @@ class AnthropicBackend(Backend):
         for _ in range(max_turns):
             if use_cache:
                 _mark_conversation_cache(messages)
-            response = self.client.messages.create(
+            kwargs = dict(
                 model=self.model,
                 max_tokens=max_tokens,
                 system=_cacheable_system(system_prompt) if use_cache else system_prompt,
                 tools=tool_schemas,
                 messages=messages,
             )
+            if on_text is None:
+                response = self.client.messages.create(**kwargs)
+            else:
+                # Streaming does not make the answer arrive sooner, it makes it arrive
+                # *visibly*: without it the user watches a blank terminal for the whole
+                # generation of the final turn, then gets everything at once.
+                with self.client.messages.stream(**kwargs) as stream:
+                    for chunk in stream.text_stream:
+                        on_text(chunk)
+                    response = stream.get_final_message()
             turn_text = "".join(b.text for b in response.content if b.type == "text").strip()
             if turn_text:
                 text_responses.append(turn_text)
