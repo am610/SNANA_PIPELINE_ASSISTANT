@@ -13,8 +13,25 @@ An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically di
 
 ## Quickstart
 
+### Option A: From PyPI
 ```bash
+pip install --upgrade pip  # Ensure pip is up-to-date
 pip install snana-assistant[all]
+snana-assistant init
+snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
+```
+
+### Option B: From Source (Recommended for Collaborators / Midway)
+To run on Midway or other clusters, clone and install locally:
+```bash
+git clone https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git
+cd SNANA_PIPELINE_ASSISTANT
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip  # Crucial on older cluster environments
+pip install -e .[all]
+
 snana-assistant init
 snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
 ```
