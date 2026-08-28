@@ -84,23 +84,6 @@ This assistant is distributed in two tiers, sharing the same underlying knowledg
 
 ---
 
-## Speed and cost
-
-Answers stream as they are written, so you see output in ~2s rather than waiting for the
-whole reply. Pipe or redirect the output and it reverts to a single clean block for
-scripts; `--no-stream` forces that explicitly.
-
-The prompt prefix (system prompt + tool schemas + conversation so far) is cached between
-turns, which cuts input-token cost roughly in half — measured 10,825 → 5,570 billed input
-equivalents on a 3-turn query. Savings are largest in `chat`, where history compounds.
-Cache entries expire after ~5 minutes, so an occasional one-shot query pays a small write
-surcharge without benefiting; set `SNANA_ASSISTANT_NO_CACHE=1` to disable.
-
-Most remaining latency is simply the number of sequential model calls an investigation
-needs — each tool round trip is 1.5–3.5s. Raise or lower it with `--max-turns`.
-
----
-
 ## Finding things: the assistant browses for you
 
 You don't need to know a path, or paste an `ls`. The assistant can list directories and
@@ -215,6 +198,25 @@ On HPC systems without a Docker daemon, Singularity/Apptainer can run the same
 image directly: `singularity run docker://ghcr.io/am610/snana-pipeline-assistant:latest diagnose "..."`.
 Built and pushed automatically on every change to `main` (see
 `.github/workflows/publish-image.yml`) — always current with this repo.
+
+---
+
+## Speed and cost
+
+Answers stream as they are written, so you see output in ~2s rather than waiting for the
+whole reply. Pipe or redirect the output and it reverts to a single clean block for
+scripts; `--no-stream` forces that explicitly.
+
+The prompt prefix (system prompt + tool schemas + conversation so far) is cached between
+turns, which cuts input-token cost roughly in half — measured 10,825 → 5,570 billed input
+equivalents on a 3-turn query. Savings are largest in `chat`, where history compounds.
+Cache entries expire after ~5 minutes, so an occasional one-shot query pays a small write
+surcharge without benefiting; set `SNANA_ASSISTANT_NO_CACHE=1` to disable.
+
+Most remaining latency is simply the number of sequential model calls an investigation
+needs — each tool round trip is 1.5–3.5s. Raise or lower it with `--max-turns`.
+
+---
 
 ## Local Offline Mode
 
