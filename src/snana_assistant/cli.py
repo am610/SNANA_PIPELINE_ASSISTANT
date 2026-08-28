@@ -81,7 +81,7 @@ def _run_chat(agent, max_turns: int, max_tokens: int, stream: bool = True) -> No
 
 def main() -> None:
     load_env()
-    parser = argparse.ArgumentParser(prog="snana-assistant")
+    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]) or "isnana")
     sub = parser.add_subparsers(dest="command", required=True)
 
     diagnose_p = sub.add_parser("diagnose", help="Describe a failure; the assistant investigates.")

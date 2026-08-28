@@ -7,7 +7,13 @@ You can install the SNANA Pipeline Assistant via standard Python tools or run it
 To install the package with all provider backends (Anthropic, OpenAI, Gemini):
 
 ```bash
-pip install "snana-assistant[all] @ git+https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git"
+pip install "isnana[all]"
+```
+
+To install the latest unreleased code directly from GitHub instead:
+
+```bash
+pip install "isnana[all] @ git+https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git"
 ```
 
 ### Initial Configuration

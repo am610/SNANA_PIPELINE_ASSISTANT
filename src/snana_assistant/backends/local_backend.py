@@ -19,7 +19,7 @@ class LocalBackend(OpenAIBackend):
 
     def __init__(self, model: str | None = None, api_key: str | None = None, base_url: str | None = None):
         if OpenAI is None:
-            raise RuntimeError("openai package not installed — pip install 'snana-assistant[openai]'")
+            raise RuntimeError("openai package not installed — pip install 'isnana[openai]'")
         
         url = base_url or os.environ.get("LOCAL_API_BASE") or os.environ.get("OLLAMA_HOST") or "http://localhost:11434/v1"
         # Standardize Ollama hostname formats to /v1

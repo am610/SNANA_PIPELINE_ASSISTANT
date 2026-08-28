@@ -53,7 +53,7 @@ The assistant is distributed across two tiers using the same underlying knowledg
 Get started in three commands:
 
 ```bash
-pip install snana-assistant[all]
+pip install isnana[all]
 snana-assistant init
 snana-assistant diagnose "My LCFIT stage is stuck waiting for a lock file"
 ```

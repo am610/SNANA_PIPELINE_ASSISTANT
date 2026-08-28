@@ -58,11 +58,15 @@ python3 knowledge/build_manual_index.py
 ```
 
 ### 4. Updating Package Data
-Before cutting a release, make sure to sync the repo data folder to the package source so it gets bundled:
+`knowledge/` is the single source of truth. The copies under `src/snana_assistant/data/`
+are what actually ship in the wheel/sdist, so regenerate and commit them whenever
+`entries.yaml` or `manual_chunks.json` changes:
 ```bash
-cp knowledge/entries.yaml src/snana_assistant/data/
-cp knowledge/manual_chunks.json src/snana_assistant/data/
+python scripts/sync_package_data.py          # copy knowledge/ -> src/snana_assistant/data/
+python scripts/sync_package_data.py --check  # CI gate: non-zero exit if stale
 ```
+The release workflow (`.github/workflows/release.yml`) runs `--check` and refuses to
+publish a stale knowledge base.
 
 ## Running the Evaluation Suite
 
@@ -71,3 +75,21 @@ Before submitting any Pull Request, run the evaluation test cases to ensure that
 python3 eval/run_eval.py
 ```
 A successful run writes updated test results to `eval/results.md` and should achieve a **100% success rate**.
+
+## Cutting a Release (PyPI)
+
+The package is published to PyPI as [`isnana`](https://pypi.org/project/isnana/) by
+`.github/workflows/release.yml` using PyPI Trusted Publishing (OIDC) — no API token is
+stored anywhere. To release:
+
+1. Update `knowledge/` if needed, then `python scripts/sync_package_data.py` and commit.
+2. Bump the version in **both** `pyproject.toml` (`project.version`) and
+   `src/snana_assistant/__init__.py` (`__version__`) — they must match — and add a
+   `CHANGELOG.md` entry.
+3. Tag and push (tag must be `v<version>`, matching the metadata):
+   ```bash
+   git tag v0.3.2
+   git push origin v0.3.2
+   ```
+   The tag push builds the sdist + wheel on a clean runner, checks the tag matches the
+   metadata version, and publishes to PyPI. `workflow_dispatch` runs a build-only dry run.

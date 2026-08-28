@@ -1,5 +1,6 @@
 # SNANA Pipeline Assistant
 
+[![PyPI version](https://img.shields.io/pypi/v/isnana.svg)](https://pypi.org/project/isnana/)
 [![Documentation Status](https://readthedocs.org/projects/snana-pipeline-assistant/badge/?version=latest)](https://snana-pipeline-assistant.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Test Suite](https://img.shields.io/badge/Evaluation--Harness-100%25%20Passed-success)](eval/results.md)
@@ -7,18 +8,29 @@
 
 An LLM-powered operations assistant for SNANA/Pippin pipelines. Automatically diagnoses pipeline failures (stale locks, cached config mismatches, out-of-memory errors) using a curated, structured knowledge base and NERSC/Slurm scheduler state. Follows operational-first debugging discipline to rule out simple causes before speculating about code-level bugs.
 
-![demo: snana-assistant diagnose finding a cited, verified failure mode](assets/demo.gif)
+![demo: snana-assistant diagnose finding a cited, verified failure mode](https://raw.githubusercontent.com/am610/SNANA_PIPELINE_ASSISTANT/main/assets/demo.gif)
 
 ---
 
 ## Quickstart
 
-> **Not distributed via PyPI.** `pip install snana-assistant` will not work and is not
-> planned — install from source (below) or use the
-> [container](#container-no-clone-no-build). Both track `main` directly, which is what
-> cluster users and collaborators actually want.
+### Option A: From PyPI
+```bash
+pip install --upgrade pip          # older cluster pip (<21.3) chokes on the build
+pip install "isnana[all]"          # or isnana[anthropic] / [openai] / [gemini] for just one SDK
 
-### Option A: From Source (Recommended for Collaborators / Midway)
+snana-assistant init
+
+# Set your API key (supports ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY)
+export ANTHROPIC_API_KEY="your-api-key"
+
+snana-assistant diagnose "BBC aborts citing sigint, tried sigint_fix, still fails"
+```
+The package installs as `isnana`; it provides both an `isnana` and a `snana-assistant`
+command (identical). Knowledge-base and SNANA-manual search work offline with no key;
+`diagnose` needs an API key or a local Ollama model.
+
+### Option B: From Source (Recommended for Collaborators / Midway)
 To run on Midway or other clusters, clone and install locally. 
 
 First, ensure you are using **Python 3.10 or higher**. You can set up your environment using either **Conda** or a standard **virtualenv**:

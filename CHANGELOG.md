@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.2] - 2026-08-27
 
+### Added
+- **Published to PyPI as [`isnana`](https://pypi.org/project/isnana/).** `pip install
+  "isnana[all]"` now installs the CLI directly, with the curated knowledge base and the
+  section-chunked SNANA manual bundled as package data (both usable offline, no key). The
+  distribution exposes both an `isnana` and a `snana-assistant` console script. Releases
+  are cut by `.github/workflows/release.yml` on a `v*` tag via PyPI Trusted Publishing
+  (OIDC) -- no API token stored in the repo -- and `scripts/sync_package_data.py --check`
+  gates the build so a release can never ship a stale knowledge base.
+
 ### Changed
 - **Lookup questions no longer open with a knowledge-base search -- 5 round trips down
   to 3.** `SYSTEM_PROMPT` mandated `search_knowledge` on the very first turn of *every*

@@ -59,7 +59,7 @@ class AnthropicBackend(Backend):
 
     def __init__(self, model: str | None = None, api_key: str | None = None):
         if anthropic is None:
-            raise RuntimeError("anthropic package not installed — pip install 'snana-assistant[anthropic]'")
+            raise RuntimeError("anthropic package not installed — pip install 'isnana[anthropic]'")
         key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not key:
             raise RuntimeError("ANTHROPIC_API_KEY not set.")

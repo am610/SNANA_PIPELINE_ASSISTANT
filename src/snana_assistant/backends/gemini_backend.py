@@ -34,7 +34,7 @@ def _to_gemini_tool(tool_schemas: list[dict[str, Any]]) -> "types.Tool":
 class GeminiBackend(Backend):
     def __init__(self, model: str = "gemini-3.6-flash", api_key: str | None = None):
         if genai is None:
-            raise RuntimeError("google-genai package not installed — pip install 'snana-assistant[gemini]'")
+            raise RuntimeError("google-genai package not installed — pip install 'isnana[gemini]'")
         key = api_key or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GOOGLE_API_KEY / GEMINI_API_KEY not set.")

@@ -1,8 +1,35 @@
 [project]
-name = "snana-assistant"
+name = "isnana"
 version = "0.3.2"
 description = "LLM-based ops assistant for SNANA/Pippin pipelines"
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ayan Mitra" }]
+keywords = [
+    "snana",
+    "pippin",
+    "supernova",
+    "cosmology",
+    "pipeline",
+    "slurm",
+    "hpc",
+    "llm",
+    "diagnostics",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = ["pyyaml>=6.0"]
 
 [project.optional-dependencies]
@@ -11,7 +38,15 @@ openai = ["openai>=1.0"]
 gemini = ["google-genai"]
 all = ["anthropic>=0.125.0", "openai>=1.0", "google-genai"]
 
+[project.urls]
+Homepage = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT"
+Documentation = "https://snana-pipeline-assistant.readthedocs.io"
+Repository = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT"
+Issues = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT/issues"
+Changelog = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT/blob/main/CHANGELOG.md"
+
 [project.scripts]
+isnana = "snana_assistant.cli:main"
 snana-assistant = "snana_assistant.cli:main"
 
 [build-system]
@@ -23,4 +58,3 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "snana_assistant.data" = ["*.yaml", "*.json"]
-

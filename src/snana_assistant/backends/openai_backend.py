@@ -31,7 +31,7 @@ def _to_openai_tools(tool_schemas: list[dict[str, Any]]) -> list[dict[str, Any]]
 class OpenAIBackend(Backend):
     def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
         if OpenAI is None:
-            raise RuntimeError("openai package not installed — pip install 'snana-assistant[openai]'")
+            raise RuntimeError("openai package not installed — pip install 'isnana[openai]'")
         key = api_key or os.environ.get("OPENAI_API_KEY")
         if not key:
             raise RuntimeError("OPENAI_API_KEY not set.")
