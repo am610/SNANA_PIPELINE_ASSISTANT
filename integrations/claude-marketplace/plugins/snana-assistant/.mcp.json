@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "snana-assistant": {
+      "command": "snana-assistant-mcp",
+      "args": []
+    }
+  }
+}

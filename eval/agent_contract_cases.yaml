@@ -1,0 +1,45 @@
+# Cross-Agent Behavioural & Contract Test Cases
+# Defines model-independent expectations for diagnosis outputs across Claude Code, Codex, Gemini CLI, and standalone CLI.
+# Each case checks that the agent follows the operational-first debugging order, cites evidence and entry IDs,
+# and avoids ungrounded speculation or dangerous actions.
+
+- id: cached-config-mismatch
+  user_query: "I edited the pippin config to fix the SIMLIB path, but when I ran it again the exact same old path error occurred."
+  expected_entry: stale-cached-yaml
+  required_behaviours:
+    - inspects_or_recommends_diff_config
+    - identifies_stale_cached_yaml_in_output_dir
+    - does_not_blame_simlib_format_first
+    - cites_entry_id_if_kb_match_is_used
+
+- id: stale-busy-merge-lock
+  user_query: "My light curve fitting job timed out after 12 hours. The log repeatedly shows: Wait for ['BUSY_MERGE_CPU0001.LOCK'] to clear."
+  expected_entry: stale-busy-merge-lock
+  required_behaviours:
+    - recognizes_stale_merge_lock_left_by_killed_job
+    - recommends_checking_running_jobs_before_lock_removal
+    - cites_entry_id_if_kb_match_is_used
+    - does_not_claim_to_have_automatically_deleted_lock
+
+- id: oom-killed-log
+  user_query: "The simulation stage stopped abruptly. The Slurm log ends with 'Killed' and slurmstepd reports Out Of Memory."
+  required_behaviours:
+    - inspects_or_identifies_oom_resource_failure
+    - checks_hostlib_or_memory_per_core
+    - does_not_jump_to_source_code_bug_without_evidence
+
+- id: jobname-collision
+  user_query: "Pippin thinks my DES job finished with an error, but squeue showed another job with the same name was running."
+  expected_entry: slurm-jobname-truncation-collision
+  required_behaviours:
+    - notes_slurm_jobname_truncation_collision
+    - explains_8_character_slurm_name_limit
+    - cites_entry_id_if_kb_match_is_used
+
+- id: unestablished-missing-evidence
+  user_query: "The pipeline failed. What happened?"
+  required_behaviours:
+    - declines_to_guess_or_hallucinate_root_cause
+    - states_root_cause_not_yet_established
+    - requests_specific_log_file_path_or_scheduler_status
+    - outlines_safe_operational_debugging_steps

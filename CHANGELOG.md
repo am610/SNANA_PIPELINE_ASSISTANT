@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Canonical model-neutral Agent Skill (`agent-skill/snana-assistant/`)**: Converted the skill tier to the open Agent Skills specification with progressive disclosure references (`debugging-order.md`, `diagnosis-output-contract.md`, `safety-and-scope.md`).
+- **Read-only Model Context Protocol server (`src/snana_assistant/mcp_server.py`)**: Exposes deterministic diagnostic functions (`search_knowledge`, `search_manual`, `check_job_status`, `read_log_tail`, `diff_config`, `list_directory`, `search_files`, `read_text_file`, `inspect_snana_environment`) over stdio via `snana-assistant-mcp`.
+- **Centralized safety policy module (`src/snana_assistant/tool_policy.py`)**: Enforces bounded reads (500 KB / 1000 lines), skips binary/FITS files, prevents symlink loop recursion, and strictly suppresses secrets and private tokens during environment inspections.
+- **Cross-agent packaging adapters (`integrations/`)**:
+  - Claude Code marketplace and plugin (`integrations/claude-marketplace/`)
+  - OpenAI Codex install helper and documentation (`integrations/codex/`)
+  - Google Gemini CLI registration documentation (`integrations/gemini/`)
+- **Automated sync and verification tools**:
+  - `scripts/sync_agent_skill.py`: Keeps packaged/compatibility skill copies in sync with canonical source and checks drift.
+  - `scripts/verify_integrations.py`: Validates manifests, tool schemas, and adapter scripts.
+- **MCP deterministic test suite (`eval/test_mcp_tools.py`)**: 9 automated tests verifying tool parity, bounds, error handling, and security invariants.
+- **Cross-agent contract cases (`eval/agent_contract_cases.yaml`)**: Model-independent behavioural assertions for evaluation across LLMs.
+
 ## [0.3.2] - 2026-08-27
 
 ### Added

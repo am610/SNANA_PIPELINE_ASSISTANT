@@ -421,3 +421,11 @@ for now. Worth revisiting as a plugin if this gets real outside adoption.
 
 
 
+- 2026-09-10 (Antigravity) — Completed Cross-Agent Skills + MCP Retrofit:
+  - Canonical Agent Skill created at `agent-skill/snana-assistant/SKILL.md` with progressive disclosure references in `references/`.
+  - FastMCP read-only tool server implemented in `src/snana_assistant/mcp_server.py` and registered as `snana-assistant-mcp`.
+  - Centralized safety boundaries implemented in `src/snana_assistant/tool_policy.py`.
+  - Cross-agent adapters added in `integrations/claude-marketplace/`, `integrations/codex/`, and `integrations/gemini/`.
+  - Drift and sync tools added in `scripts/sync_agent_skill.py` and `scripts/verify_integrations.py`.
+  - Added deterministic test suite `eval/test_mcp_tools.py` (9/9 passed) and behavioural assertions `eval/agent_contract_cases.yaml`.
+  - Updated documentation across README.md, CHANGELOG.md, and AGENTS.md.

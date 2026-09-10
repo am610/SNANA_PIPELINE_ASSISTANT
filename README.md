@@ -87,12 +87,74 @@ source /path/to/SNANA_PIPELINE_ASSISTANT/.venv/bin/activate
 
 ---
 
-## Two ways to run this
+## How to run this: Multi-Agent Skills & Standalone CLI
 
-This assistant is distributed in two tiers, sharing the same underlying knowledge base ([`entries.yaml`](knowledge/entries.yaml)):
+The SNANA Pipeline Assistant provides one unified, canonical diagnostic capability accessible across multiple environments:
 
-* **Quick Start — Claude Code Skill** ([`skill/SKILL.md`](skill/SKILL.md)): Zero setup, uses whatever Claude Code session you already have running. Best-effort (model and tool execution depend on your Claude Code plan, not pinned, and not covered by the eval harness).
-* **Scripted & Reproducible — Standalone CLI** (this package): Pinned model, deterministic Python tools, covered by an evaluation suite ([`cases.yaml`](eval/cases.yaml)). Runs non-interactively (cron/CI/scripted) and supports local offline models.
+```text
+                         SNANA Pipeline Assistant
+                                   |
+                  Canonical Domain Procedure & Safety
+                     (agent-skill/snana-assistant/)
+                                   |
+                 +-----------------+-----------------+
+                 |                                   |
+                 v                                   v
+      AI Coding Agent Skills              Deterministic Read-Only MCP
+   (Claude Code / Codex / Gemini)           (snana-assistant-mcp)
+                 |                                   |
+                 +-----------------+-----------------+
+                                   |
+                                   v
+                        Standalone CLI & Eval
+                         (isnana / snana-assistant)
+```
+
+### 1. Use with your existing AI coding agent
+
+Install the **snana-assistant** Agent Skill and read-only MCP server into whichever AI assistant you already use. The agent follows the same operational-first debugging sequence and safety guarantees across models.
+
+#### Claude Code
+Add the repository marketplace and install the plugin:
+```bash
+/plugin marketplace add am610/SNANA_PIPELINE_ASSISTANT
+/plugin install snana-assistant@snana-tools
+```
+Or install the standalone skill directly: copy [`agent-skill/snana-assistant`](agent-skill/snana-assistant) to `~/.claude/skills/snana-assistant`.
+
+#### OpenAI Codex
+Install the canonical skill using the included helper:
+```bash
+# Global install (~/.agents/skills/snana-assistant):
+./integrations/codex/install-skill.sh --user
+
+# Or repository-scoped (.agents/skills/snana-assistant):
+./integrations/codex/install-skill.sh --repo
+```
+Then register `snana-assistant-mcp` in your Codex MCP configuration. See [`integrations/codex/README.md`](integrations/codex/README.md).
+
+#### Google Gemini CLI
+Install the skill directly from Git or local checkout:
+```bash
+gemini skills install https://github.com/am610/SNANA_PIPELINE_ASSISTANT.git --path agent-skill/snana-assistant
+# Or link locally:
+gemini skills link ./agent-skill/snana-assistant
+```
+Then register the read-only MCP server:
+```bash
+gemini mcp add snana-assistant --command snana-assistant-mcp
+```
+See [`integrations/gemini/README.md`](integrations/gemini/README.md).
+
+### 2. Standalone CLI (Scriptable & Reproducible Tier)
+Run non-interactively in scripts, cron jobs, CI pipelines, or local offline environments using the pinned CLI (`isnana` or `snana-assistant`). Backed by automated regression evaluation suites ([`cases.yaml`](eval/cases.yaml)).
+
+### Safety & Read-Only Guarantee
+All AI agent integrations and MCP tool endpoints (`snana-assistant-mcp`) enforce strict read-only safety policies:
+- **No file modifications or deletions**: Never alters configs or deletes lock files automatically.
+- **No job submissions or cancellations**: Strictly read-only scheduler checks (`squeue -u $USER` / `qstat`).
+- **No arbitrary shell execution**: No unconstrained shell access.
+- **Bounded queries & secret suppression**: Capped log and file reads; sensitive tokens, keys, and credentials are never exposed.
 
 ---
 

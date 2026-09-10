@@ -36,7 +36,8 @@ dependencies = ["pyyaml>=6.0"]
 anthropic = ["anthropic>=0.125.0"]
 openai = ["openai>=1.0"]
 gemini = ["google-genai"]
-all = ["anthropic>=0.125.0", "openai>=1.0", "google-genai"]
+mcp = ["mcp>=1.0.0"]
+all = ["anthropic>=0.125.0", "openai>=1.0", "google-genai", "mcp>=1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT"
@@ -48,6 +49,7 @@ Changelog = "https://github.com/am610/SNANA_PIPELINE_ASSISTANT/blob/main/CHANGEL
 [project.scripts]
 isnana = "snana_assistant.cli:main"
 snana-assistant = "snana_assistant.cli:main"
+snana-assistant-mcp = "snana_assistant.mcp_server:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

@@ -1,0 +1,16 @@
+{
+  "name": "snana-tools",
+  "description": "Domain-specific tools and operational assistants for supernova cosmology pipelines.",
+  "owner": {
+    "name": "Ayan Mitra",
+    "url": "https://github.com/am610/SNANA_PIPELINE_ASSISTANT"
+  },
+  "plugins": [
+    {
+      "name": "snana-assistant",
+      "description": "Operational diagnostics for SNANA and Pippin pipeline failures with read-only tools and curated knowledge base.",
+      "version": "0.3.2",
+      "path": "plugins/snana-assistant"
+    }
+  ]
+}
