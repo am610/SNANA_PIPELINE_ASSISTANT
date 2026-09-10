@@ -9,7 +9,7 @@
     {
       "name": "snana-assistant",
       "description": "Operational diagnostics for SNANA and Pippin pipeline failures with read-only tools and curated knowledge base.",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "path": "plugins/snana-assistant"
     }
   ]

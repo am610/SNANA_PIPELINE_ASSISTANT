@@ -1,6 +1,6 @@
 [project]
 name = "isnana"
-version = "0.3.2"
+version = "0.3.3"
 description = "LLM-based ops assistant for SNANA/Pippin pipelines"
 readme = "README.md"
 requires-python = ">=3.10"
