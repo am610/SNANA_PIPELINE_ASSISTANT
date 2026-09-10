@@ -39,12 +39,12 @@ For users operating on secure compute environments or login nodes where external
 
 ---
 
-## Two-Tier Distribution
+## Multi-Agent Skills & Standalone CLI
 
-The assistant is distributed across two tiers using the same underlying knowledge base:
+The assistant provides a unified diagnostic capability across multiple runtime environments:
 
-1. **Quick Start — Claude Code Session Skill:** A zero-setup session skill that inherits the context of your active terminal session.
-2. **Deterministic & Scripted — CLI Application:** A pinned-model command-line tool with deterministic Python-based tools, fully covered by a 20-case evaluation harness.
+1. **Cross-Agent Skills (Claude Code, OpenAI Codex, Gemini CLI):** Zero-friction integration directly into the AI coding agent you already use, backed by deterministic read-only tools via `snana-assistant-mcp`. See [Cross-Agent Skills & MCP](cross-agent-skills.md).
+2. **Deterministic & Scripted CLI Application (`isnana` / `snana-assistant`):** A pinned-model command-line tool with deterministic Python tools, automated evaluations, and local offline execution options.
 
 ---
 
